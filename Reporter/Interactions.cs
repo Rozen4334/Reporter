@@ -131,7 +131,7 @@ namespace Reporter
 
             var reports = Reports.GetAllReports();
 
-            int max = page * 10;
+            int max = 10 + reports.Count - (page * 10);
 
             var pages = reports.Count.RoundUp() / 10;
 
@@ -142,10 +142,8 @@ namespace Reporter
                 .WithButton("Next page", $"id_page|{args.User.Id}|{page + 1}", ButtonStyle.Success, null, null, (page >= pages) ? true : false);
 
             var users = new List<User>();
-            for (int i = max - 9; i <= max; i++)
-            {
-                users.Add(reports.Find(x => x.ID == i));
-            }
+            users.AddRange(reports.FindAll(x => x.ID >= max - 9 && x.ID <= max));
+            users.Reverse();
 
             StringBuilder sb = new();
             foreach (var x in users)

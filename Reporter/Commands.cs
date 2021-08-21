@@ -252,9 +252,10 @@ namespace Reporter
                 await args.RespondAsync(embeds);
                 return;
             }
+            var pages = reports.Count.RoundUp() / 10;
 
-            int max = page * 10;
-            if (max > reports.Count)
+            int max = 10 + reports.Count - (page * 10);
+            if (page > pages)
             {
                 builder.WithTitle("Invalid syntax");
                 builder.WithDescription("The page value can't be greater than the amount of existing reports.");
@@ -263,8 +264,6 @@ namespace Reporter
                 return;
             }
 
-            var pages = reports.Count.RoundUp() / 10;
-
             builder.WithFooter($"Reporter | Page {page} of {pages} | {DateTime.UtcNow}", Program.Client.CurrentUser.GetAvatarUrl());
 
             var component = new ComponentBuilder()
@@ -272,11 +271,8 @@ namespace Reporter
                 .WithButton("Next page", $"id_page|{args.User.Id}|{page + 1}", ButtonStyle.Success, null, null, (page >= pages) ? true : false);
 
             var users = new List<User>();
-            for (int i = max - 9; i <= max; i++)
-            {
-                users.Add(reports.Find(x => x.ID == i));
-            }
-
+            users.AddRange(reports.FindAll(x => x.ID >= max - 9 && x.ID <= max));
+            users.Reverse();
             StringBuilder sb = new();
             foreach (var x in users)
             {
