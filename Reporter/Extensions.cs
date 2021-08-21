@@ -26,7 +26,7 @@ namespace Reporter
         {
             builder.WithColor(Color.Blue);
             builder.WithAuthor((user != null) ? user : Program.Client.CurrentUser);
-            builder.WithFooter($"Reporter | {DateTime.UtcNow}");
+            builder.WithFooter($"Reporter | {DateTime.UtcNow}", Program.Client.CurrentUser.GetAvatarUrl());
             return builder;
         }
 
@@ -35,6 +35,13 @@ namespace Reporter
             if (TimeSpan.TryParse(input, out TimeSpan result))
                 return result;
             else return null;
+        }
+
+        public static int RoundUp(this int input)
+        {
+            var array = input.ToString().ToCharArray();
+            var last = int.Parse(array.Last().ToString());
+            return input + 10 - last;
         }
 
         public static async Task WriteInteractionsAsync(IGuild guild)
@@ -174,6 +181,21 @@ namespace Reporter
                         Description = "Edit the total blocks broken of a report",
                         Type = ApplicationCommandOptionType.Integer,
                     }
+                },
+            }, guild.Id);
+            await Program.Client.Rest.CreateGuildCommand(new SlashCommandCreationProperties()
+            {
+                Name = "listreports",
+                Description = "Views all reports and their ID",
+                Options = new List<ApplicationCommandOptionProperties>()
+                {
+                    new ApplicationCommandOptionProperties()
+                    {
+                        Name = "page",
+                        Required = false,
+                        Description = "The page of the report list",
+                        Type = ApplicationCommandOptionType.Integer,
+                    },
                 },
             }, guild.Id);
         }

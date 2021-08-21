@@ -91,5 +91,10 @@ namespace Reporter.Data
                 return null;
             return result.FirstOrDefault();
         }
+
+        public static List<User> GetAllReports()
+        {
+            return Users;
+        }
     }
 }

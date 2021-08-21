@@ -31,6 +31,9 @@ namespace Reporter
                 case "editreport":
                     await EditReport(cmd);
                     break;
+                case "listreports":
+                    await ListReports(cmd);
+                    break;
 
             }    
         }
@@ -225,6 +228,64 @@ namespace Reporter
             Reports.SaveUsers();
             Embed[] em = { builder.Build() };
             await args.RespondAsync(em);
+        }
+        private static async Task ListReports(SocketSlashCommand args)
+        {
+            int page = 1;
+            if (args.Data.Options != null)
+            {
+                var data = args.Data.Options.ToArray();
+                page = int.Parse(data.First().Value.ToString());
+            }
+            var builder = new EmbedBuilder().Construct(args.User);
+
+            builder.WithTitle("Report list");
+            builder.WithDescription($"Currently viewing page: ` {page} `");
+
+            var reports = Reports.GetAllReports();
+
+            if (page < 1)
+            {
+                builder.WithTitle("Invalid syntax");
+                builder.WithDescription("The page value can't be less than 1.");
+                Embed[] embeds = { builder.Build() };
+                await args.RespondAsync(embeds);
+                return;
+            }
+
+            int max = page * 10;
+            if (max > reports.Count)
+            {
+                builder.WithTitle("Invalid syntax");
+                builder.WithDescription("The page value can't be greater than the amount of existing reports.");
+                Embed[] embeds = { builder.Build() };
+                await args.RespondAsync(embeds);
+                return;
+            }
+
+            var pages = reports.Count.RoundUp() / 10;
+
+            builder.WithFooter($"Reporter | Page {page} of {pages} | {DateTime.UtcNow}", Program.Client.CurrentUser.GetAvatarUrl());
+
+            var component = new ComponentBuilder()
+                .WithButton("Previous page", $"id_page|{args.User.Id}|{page - 1}", ButtonStyle.Danger, null, null, (page - 1 == 0) ? true : false)
+                .WithButton("Next page", $"id_page|{args.User.Id}|{page + 1}", ButtonStyle.Success, null, null, (page >= pages) ? true : false);
+
+            var users = new List<User>();
+            for (int i = max - 9; i <= max; i++)
+            {
+                users.Add(reports.Find(x => x.ID == i));
+            }
+
+            StringBuilder sb = new();
+            foreach (var x in users)
+            {
+                sb.AppendLine($"` {x.ID} ` **{x.Username}** - Type: {x.Type}");
+            }
+            builder.AddField($"Reports:", sb.ToString());
+
+            Embed[] em = { builder.Build() };
+            await args.RespondAsync(em, null, false, InteractionResponseType.ChannelMessageWithSource, false, null, null, component.Build());
         }
     }
 }

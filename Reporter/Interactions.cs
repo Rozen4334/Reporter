@@ -35,6 +35,9 @@ namespace Reporter
                 case "id_view":
                     await ViewReport(component, id[2]);
                     break;
+                case "id_page":
+                    await ReportPages(component, id[2]);
+                    break;
             }
         }
         
@@ -45,9 +48,10 @@ namespace Reporter
 
             Extensions.PendingDBEntries.RemoveAll(x => x.Split('|').First() == args.User.Id.ToString());
 
-            var message = await args.GetOriginalResponseAsync();
+            var message = args.Message;
             await message.ModifyAsync(x => x.Components = null);
             await message.ModifyAsync(x => x.Embed = builder.Build());
+            await args.AcknowledgeAsync();
         }
 
         private static async Task Confirm(SocketMessageComponent args)
@@ -65,6 +69,7 @@ namespace Reporter
             var message = args.Message;
             await message.ModifyAsync(x => x.Components = component.Build());
             await message.ModifyAsync(x => x.Embed = builder.Build());
+            await args.AcknowledgeAsync();
         }
 
         private static async Task Images(SocketMessageComponent args, string iid)
@@ -112,6 +117,46 @@ namespace Reporter
 
             await message.ModifyAsync(x => x.Components = component.Build());
             await message.ModifyAsync(x => x.Embed = builder.Build());
+            await args.AcknowledgeAsync();
+        }
+
+        private static async Task ReportPages(SocketMessageComponent args, string ppage)
+        {
+            int page = int.Parse(ppage);
+            var message = args.Message;
+            var builder = new EmbedBuilder().Construct(args.User);
+
+            builder.WithTitle("Report list");
+            builder.WithDescription($"Currently viewing page: ` {page} `");
+
+            var reports = Reports.GetAllReports();
+
+            int max = page * 10;
+
+            var pages = reports.Count.RoundUp() / 10;
+
+            builder.WithFooter($"Reporter | Page {page} of {pages} | {DateTime.UtcNow}", Program.Client.CurrentUser.GetAvatarUrl());
+
+            var component = new ComponentBuilder()
+                .WithButton("Previous page", $"id_page|{args.User.Id}|{page - 1}", ButtonStyle.Danger, null, null, (page - 1 == 0) ? true : false)
+                .WithButton("Next page", $"id_page|{args.User.Id}|{page + 1}", ButtonStyle.Success, null, null, (page >= pages) ? true : false);
+
+            var users = new List<User>();
+            for (int i = max - 9; i <= max; i++)
+            {
+                users.Add(reports.Find(x => x.ID == i));
+            }
+
+            StringBuilder sb = new();
+            foreach (var x in users)
+            {
+                if (x != null)
+                sb.AppendLine($"` {x.ID} ` **{x.Username}** - Type: {x.Type}");
+            }
+            builder.AddField($"Reports:", sb.ToString());
+            await message.ModifyAsync(x => x.Components = component.Build());
+            await message.ModifyAsync(x => x.Embed = builder.Build());
+            await args.AcknowledgeAsync();
         }
     }
 }
