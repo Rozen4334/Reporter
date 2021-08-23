@@ -41,6 +41,8 @@ namespace Reporter
         {
             var array = input.ToString().ToCharArray();
             var last = int.Parse(array.Last().ToString());
+            if (last == 0)
+                return input;
             return input + 10 - last;
         }
 

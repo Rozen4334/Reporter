@@ -59,8 +59,10 @@ namespace Reporter
             var builder = new EmbedBuilder().Construct(args.User).WithColor(Color.Green);
             builder.WithTitle("Succesfully wrote report");
 
-            string[] i = Extensions.PendingDBEntries.Find(x => x.Split('|').First() == args.User.Id.ToString()).Split('|');
+            string entry = Extensions.PendingDBEntries.Find(x => x.Split('|').First() == args.User.Id.ToString());
+            string[] i = entry.Split('|');
             var report = Reports.AddUser(i[1], i[2], DateTime.Parse(i[3]), i[5], int.Parse(i[4]), null, (i.Length > 6) ? i[6] : "");
+            Extensions.PendingDBEntries.Remove(entry);
 
             builder.WithDescription($"Created report for: ` {report.Username} ` with ID: ` {report.ID} `");
 
