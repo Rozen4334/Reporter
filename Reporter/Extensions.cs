@@ -99,7 +99,7 @@ namespace Reporter
             }, guild.Id) ;
             await Program.Client.Rest.CreateGuildCommand(new SlashCommandCreationProperties()
             {
-                Name = "viewuser",
+                Name = "playerinfo",
                 Description = "Gets all reports, filtered by a specific player.",
                 Options = new List<ApplicationCommandOptionProperties>()
                 {
@@ -114,7 +114,7 @@ namespace Reporter
             }, guild.Id);
             await Program.Client.Rest.CreateGuildCommand(new SlashCommandCreationProperties()
             {
-                Name = "viewreport",
+                Name = "reportinfo",
                 Description = "Views a report for the specified ID.",
                 Options = new List<ApplicationCommandOptionProperties>()
                 {
@@ -186,7 +186,7 @@ namespace Reporter
             }, guild.Id);
             await Program.Client.Rest.CreateGuildCommand(new SlashCommandCreationProperties()
             {
-                Name = "listreports",
+                Name = "reports",
                 Description = "Views all reports and their ID",
                 Options = new List<ApplicationCommandOptionProperties>()
                 {
@@ -196,6 +196,21 @@ namespace Reporter
                         Required = false,
                         Description = "The page of the report list",
                         Type = ApplicationCommandOptionType.Integer,
+                    },
+                },
+            }, guild.Id);
+            await Program.Client.Rest.CreateGuildCommand(new SlashCommandCreationProperties()
+            {
+                Name = "reporterinfo",
+                Description = "Gets all data on a reporter, specified by their Discord username.",
+                Options = new List<ApplicationCommandOptionProperties>()
+                {
+                    new ApplicationCommandOptionProperties()
+                    {
+                        Name = "user",
+                        Required = false,
+                        Description = "The page of the report list",
+                        Type = ApplicationCommandOptionType.User,
                     },
                 },
             }, guild.Id);

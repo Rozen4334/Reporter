@@ -19,20 +19,23 @@ namespace Reporter
             var cmd = args as SocketSlashCommand;
             switch(cmd.Data.Name)
             {
-                case "viewreport":
-                    await ViewReport(cmd);
+                case "reportinfo":
+                    await ReportInfo(cmd);
                     break;
                 case "report":
                     await Report(cmd);
                     break;
-                case "viewuser":
-                    await ViewUser(cmd);
+                case "playerinfo":
+                    await PlayerInfo(cmd);
                     break;
                 case "editreport":
                     await EditReport(cmd);
                     break;
-                case "listreports":
-                    await ListReports(cmd);
+                case "reports":
+                    await Reports(cmd);
+                    break;
+                case "reporterinfo":
+                    await ReporterInfo(cmd);
                     break;
 
             }    
@@ -90,11 +93,11 @@ namespace Reporter
             await args.RespondAsync(em, null, false, InteractionResponseType.ChannelMessageWithSource, false, null, null, component.Build());
         }
 
-        private static async Task ViewReport(SocketSlashCommand args)
+        private static async Task ReportInfo(SocketSlashCommand args)
         { 
             var data = args.Data.Options.ToArray();
             int id = int.Parse(data.First().Value.ToString());
-            var reportbyid = Reports.GetReportByID(id);
+            var reportbyid = Data.Reports.GetReportByID(id);
 
             var builder = new EmbedBuilder().Construct(args.User);
 
@@ -110,7 +113,7 @@ namespace Reporter
             var component = new ComponentBuilder().WithButton("View images", $"id_img|{args.User.Id}|{reportbyid.ID}");
 
             builder.WithTitle($"Report: ` {reportbyid.ID} `");
-            builder.AddField("Reported by:", (reportbyid.Agent != "") ? reportbyid.Agent : "Unavailable.");
+            builder.AddField("Reported by:", (reportbyid.Agent != 0) ? reportbyid.Agent : "` Unavailable. `");
             builder.AddField("User:", reportbyid.Username, true);
             builder.AddField("Type:", reportbyid.Type, true);
             builder.AddField("Time:", reportbyid.Time);
@@ -126,11 +129,11 @@ namespace Reporter
             await args.RespondAsync(em, null, false, InteractionResponseType.ChannelMessageWithSource, false, null, null, component.Build());
         }
 
-        private static async Task ViewUser(SocketSlashCommand args)
+        private static async Task PlayerInfo(SocketSlashCommand args)
         {
             var data = args.Data.Options.ToArray();
             string plr = data.First().Value.ToString();
-            var reports = Reports.GetReports(plr);
+            var reports = Data.Reports.GetReports(plr);
 
             var builder = new EmbedBuilder().Construct(args.User);
 
@@ -150,7 +153,7 @@ namespace Reporter
             foreach (var x in reports)
             {
                 blocks += x.BlocksBroken;
-                ids.Add($"**🢒 {x.ID}**");
+                ids.Add($"` {x.ID} ` - type: {x.Type}");
             }
             builder.AddField("Total blocks broken:", (blocks != 0) ? blocks : "None");
             builder.AddField("Last punishment given:", reports.Last().Punishment);
@@ -163,7 +166,7 @@ namespace Reporter
         {
             var data = args.Data.Options.ToArray();
             int id = int.Parse(data.First().Value.ToString());
-            var reportbyid = Reports.GetReportByID(id);
+            var reportbyid = Data.Reports.GetReportByID(id);
 
             var builder = new EmbedBuilder().Construct(args.User);
 
@@ -226,11 +229,11 @@ namespace Reporter
                         break;
                 }
             }
-            Reports.SaveUsers();
+            Data.Reports.SaveUsers();
             Embed[] em = { builder.Build() };
             await args.RespondAsync(em);
         }
-        private static async Task ListReports(SocketSlashCommand args)
+        private static async Task Reports(SocketSlashCommand args)
         {
             int page = 1;
             if (args.Data.Options != null)
@@ -243,7 +246,7 @@ namespace Reporter
             builder.WithTitle("Report list");
             builder.WithDescription($"Currently viewing page: ` {page} `");
 
-            var reports = Reports.GetAllReports();
+            var reports = Data.Reports.GetAllReports();
 
             if (page < 1)
             {
@@ -278,12 +281,53 @@ namespace Reporter
             foreach (var x in users)
             {
                 if (x != null)
-                    sb.AppendLine($"` {x.ID} ` **{x.Username}** - Type: {x.Type}" + " \n⤷ Reported by: " + ((x.Agent != "") ? $"**{x.Agent}**" : "Unavailable"));
+                {
+                    sb.AppendLine($"` {x.ID} ` **{x.Username}** - Type: {x.Type}");
+                    sb.AppendLine("⤷ Reported by: " + ((x.Agent != 0) ? $"**{Program.Client.GetUser(x.Agent).Username}**" : "Unavailable"));
+                }
             }
             builder.AddField($"Reports:", sb.ToString());
 
             Embed[] em = { builder.Build() };
             await args.RespondAsync(em, null, false, InteractionResponseType.ChannelMessageWithSource, false, null, null, component.Build());
+        }
+
+        private static async Task ReporterInfo(SocketSlashCommand args)
+        {
+            SocketGuildUser user = args.User as SocketGuildUser;
+            if (args.Data.Options != null)
+            {
+                user = (SocketGuildUser)args.Data.Options.ToArray().FirstOrDefault().Value;
+            }
+            var builder = new EmbedBuilder().Construct(args.User);
+            builder.WithTitle($"Info about ` {user.Username} `");
+
+            builder.AddField("Position:", $"<@&{user.Roles.Last().Id}>");
+
+            var reports = Data.Reports.GetReportByAgent(user.Id);
+
+            reports.Reverse();
+
+            List<string> strlist = new();
+            foreach (var x in reports)
+            {
+                if (strlist.Count > 15)
+                {
+                    strlist.Add("Unable to display additional reports. Displaying latest ` 15 `.");
+                    break;
+                }
+                strlist.Add($"` {x.ID} ` - type: {x.Type}");
+            }
+            StringBuilder sb = new();
+            if (strlist.Count != 0)
+            {
+                foreach (var str in strlist)
+                    sb.AppendLine(str);
+            }
+
+            builder.AddField($"Total reports [{reports.Count}]:", sb.ToString());
+            Embed[] em = { builder.Build() };
+            await args.RespondAsync(em);
         }
     }
 }

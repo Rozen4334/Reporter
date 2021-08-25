@@ -11,7 +11,7 @@ namespace Reporter.Data
     public class User
     {
         public int ID { get; set; }
-        public string Agent { get; set; }
+        public ulong Agent { get; set; }
         public string Username { get; set; }
         public string Type { get; set; }
         public DateTime Time { get; set; }
@@ -51,17 +51,13 @@ namespace Reporter.Data
                 return null;
             }
 
-            IUser user1 = null;
-            if (ulong.TryParse(agent, out ulong result))
-            {
-                user1 = Program.Client.GetUser(result);
-            }
+            var userid = ulong.Parse(agent);
             if (urls == null)
                 urls = new List<string>();
             User user = new()
             {
                 ID = id,
-                Agent = user1.Username,
+                Agent = userid,
                 Username = username,
                 Type = type.ToLower(),
                 BlocksBroken = blocksbroken,
@@ -99,6 +95,16 @@ namespace Reporter.Data
             if (result == null)
                 return null;
             return result.FirstOrDefault();
+        }
+
+        public static List<User> GetReportByAgent(ulong userid)
+        {
+            var result = from x in Users
+                         where x.Agent == userid
+                         select x;
+            if (result == null)
+                return null;
+            return result.ToList();
         }
 
         public static List<User> GetAllReports()

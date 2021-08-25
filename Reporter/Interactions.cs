@@ -151,7 +151,10 @@ namespace Reporter
             foreach (var x in users)
             {
                 if (x != null)
-                    sb.AppendLine($"` {x.ID} ` **{x.Username}** - Type: {x.Type}" + " \n⤷ Reported by: " + ((x.Agent != "") ? $"**{x.Agent}**" : "Unavailable"));
+                {
+                    sb.AppendLine($"` {x.ID} ` **{x.Username}** - Type: {x.Type}");
+                    sb.AppendLine("⤷ Reported by: " + ((x.Agent != 0) ? $"**{Program.Client.GetUser(x.Agent).Username}**" : "Unavailable"));
+                }
             }
             builder.AddField($"Reports:", sb.ToString());
             await message.ModifyAsync(x => x.Components = component.Build());
