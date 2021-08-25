@@ -110,6 +110,7 @@ namespace Reporter
             var component = new ComponentBuilder().WithButton("View images", $"id_img|{args.User.Id}|{reportbyid.ID}");
 
             builder.WithTitle($"Report: ` {reportbyid.ID} `");
+            builder.AddField("Reported by:", (reportbyid.Agent != "") ? reportbyid.Agent : "Unavailable.");
             builder.AddField("User:", reportbyid.Username, true);
             builder.AddField("Type:", reportbyid.Type, true);
             builder.AddField("Time:", reportbyid.Time);
@@ -276,7 +277,8 @@ namespace Reporter
             StringBuilder sb = new();
             foreach (var x in users)
             {
-                sb.AppendLine($"` {x.ID} ` **{x.Username}** - Type: {x.Type}");
+                if (x != null)
+                    sb.AppendLine($"` {x.ID} ` **{x.Username}** - Type: {x.Type}" + " \n⤷ Reported by: " + ((x.Agent != "") ? $"**{x.Agent}**" : "Unavailable"));
             }
             builder.AddField($"Reports:", sb.ToString());
 

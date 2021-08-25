@@ -39,11 +39,10 @@ namespace Reporter
 
         public static int RoundUp(this int input)
         {
-            var array = input.ToString().ToCharArray();
-            var last = int.Parse(array.Last().ToString());
-            if (last == 0)
-                return input;
-            return input + 10 - last;
+            int i = input % 10;
+            if (i != 0)
+                input += (10 - i);
+            return input;
         }
 
         public static async Task WriteInteractionsAsync(IGuild guild)

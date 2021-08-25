@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Discord;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,6 +11,7 @@ namespace Reporter.Data
     public class User
     {
         public int ID { get; set; }
+        public string Agent { get; set; }
         public string Username { get; set; }
         public string Type { get; set; }
         public DateTime Time { get; set; }
@@ -40,7 +42,7 @@ namespace Reporter.Data
 
         public static void SaveUsers() => Writer.SaveUsers(Users, FilePath);
 
-        public static User AddUser(string username, string type, DateTime time, string punishment, int blocksbroken, List<string> urls = null, string note = "")
+        public static User AddUser(string agent, string username, string type, DateTime time, string punishment, int blocksbroken, List<string> urls = null, string note = "")
         {
             var id = 1 + ((Users.Count != 0) ? Users.Count : 0);
             if (Users.Any(x => x.ID == id))
@@ -48,11 +50,18 @@ namespace Reporter.Data
                 Console.WriteLine("false ID, code change required");
                 return null;
             }
+
+            IUser user1 = null;
+            if (ulong.TryParse(agent, out ulong result))
+            {
+                user1 = Program.Client.GetUser(result);
+            }
             if (urls == null)
                 urls = new List<string>();
             User user = new()
             {
                 ID = id,
+                Agent = user1.Username,
                 Username = username,
                 Type = type.ToLower(),
                 BlocksBroken = blocksbroken,

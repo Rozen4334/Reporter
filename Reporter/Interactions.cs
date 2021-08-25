@@ -61,7 +61,7 @@ namespace Reporter
 
             string entry = Extensions.PendingDBEntries.Find(x => x.Split('|').First() == args.User.Id.ToString());
             string[] i = entry.Split('|');
-            var report = Reports.AddUser(i[1], i[2], DateTime.Parse(i[3]), i[5], int.Parse(i[4]), null, (i.Length > 6) ? i[6] : "");
+            var report = Reports.AddUser(i[0], i[1], i[2], DateTime.Parse(i[3]), i[5], int.Parse(i[4]), null, (i.Length > 6) ? i[6] : "");
             Extensions.PendingDBEntries.Remove(entry);
 
             builder.WithDescription($"Created report for: ` {report.Username} ` with ID: ` {report.ID} `");
@@ -151,7 +151,7 @@ namespace Reporter
             foreach (var x in users)
             {
                 if (x != null)
-                sb.AppendLine($"` {x.ID} ` **{x.Username}** - Type: {x.Type}");
+                    sb.AppendLine($"` {x.ID} ` **{x.Username}** - Type: {x.Type}" + " \n⤷ Reported by: " + ((x.Agent != "") ? $"**{x.Agent}**" : "Unavailable"));
             }
             builder.AddField($"Reports:", sb.ToString());
             await message.ModifyAsync(x => x.Components = component.Build());
