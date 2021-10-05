@@ -18,9 +18,8 @@ namespace Reporter
         private static readonly DiscordSocketConfig _ClientConfig = new()
         {
             MessageCacheSize = 100,
-            AlwaysAcknowledgeInteractions = false,
             AlwaysDownloadUsers = true,
-            GatewayIntents = GatewayIntents.All
+            GatewayIntents = GatewayIntents.All,
         };
 
         private bool _RetryConnection = true;
@@ -94,8 +93,8 @@ namespace Reporter
             // Message recieved & command handler.
             Client.MessageReceived += MessageReceived;
             Client.InteractionCreated += InteractionRecieved;
+            Client.UserUpdated += UserUpdated;
 
-            Client.Connected += Connected;
             Client.Ready += Ready;
             Client.Log += Log;
 
@@ -110,51 +109,56 @@ namespace Reporter
             int argPos = 0;
             if (message.HasMentionPrefix(Client.CurrentUser, ref argPos))
             {
-                if (message.Content.Contains("writeappcommands"))
+                if (args.Author is SocketGuildUser user)
                 {
-                    if (message.Channel is ITextChannel channel)
+                    if (!user.HasRole("Staff"))
+                        return;
+                    if (message.Content.Contains("writeappcommands"))
                     {
-                        await Extensions.WriteInteractionsAsync(channel.Guild);
-                        await channel.SendMessageAsync("Succesfully created application commands. Ready for use!");
-                    }
-                }
-                if (message.Content.Contains("deleteappcommands"))
-                {
-                    if (message.Channel is ITextChannel channel)
-                    {
-                        await Extensions.RemoveAppCommands(channel.Guild);
-                        await channel.SendMessageAsync("Succesfully removed application commands. Use ` {mention} writeappcommands ` to write all app commands");
-                    }
-                }
-                if (message.Content.Contains("addimage"))
-                {
-                    if (message.Channel is ITextChannel channel)
-                    {
-                        string[] input = message.Content.Trim().Split(' ');
-
-                        if (input.Length > 4)
+                        if (message.Channel is ITextChannel channel)
                         {
-                            await channel.SendMessageAsync("Invalid syntax, only add one image per execution.");
-                            return;
-                        }    
-
-                        if (int.TryParse(input[2], out int id))
+                            await Extensions.WriteAppCommands(channel.Guild);
+                            await channel.SendMessageAsync("Succesfully created application commands. Ready for use!");
+                        }
+                    }
+                    if (message.Content.Contains("deleteappcommands"))
+                    {
+                        if (message.Channel is ITextChannel channel)
                         {
-                            var report = Reports.GetReportByID(id);
+                            await Extensions.RemoveAppCommands(channel.Guild);
+                            await channel.SendMessageAsync("Succesfully removed application commands. Use ` {mention} writeappcommands ` to write all app commands");
+                        }
+                    }
+                    if (message.Content.Contains("addimage"))
+                    {
+                        if (message.Channel is ITextChannel channel)
+                        {
+                            string[] input = message.Content.Trim().Split(' ');
 
-                            if (message.Attachments.Count != 0)
+                            if (input.Length > 4)
                             {
-                                foreach (var x in message.Attachments)
-                                {
-                                    report.ProofURLs.Add(x.Url);
-                                }
-                                Reports.SaveUsers();
-                                await channel.SendMessageAsync("Succesfully added image(s) to report.");
+                                await channel.SendMessageAsync("Invalid syntax, only add one image per execution.");
                                 return;
                             }
-                            report.ProofURLs.Add(input[3]);
-                            await channel.SendMessageAsync("Succesfully added image to report.");
-                            Reports.SaveUsers();
+
+                            if (int.TryParse(input[2], out int id))
+                            {
+                                var report = Reports.GetReportByID(id);
+
+                                if (message.Attachments.Count != 0)
+                                {
+                                    foreach (var x in message.Attachments)
+                                    {
+                                        report.ProofURLs.Add(x.Url);
+                                    }
+                                    Reports.SaveUsers();
+                                    await channel.SendMessageAsync("Succesfully added image(s) to report.");
+                                    return;
+                                }
+                                report.ProofURLs.Add(input[3]);
+                                await channel.SendMessageAsync("Succesfully added image to report.");
+                                Reports.SaveUsers();
+                            }
                         }
                     }
                 }
@@ -173,14 +177,29 @@ namespace Reporter
                     break;
             }
         }
+
+        private async Task UserUpdated(SocketUser entry, SocketUser result)
+        {
+            if (entry is SocketGuildUser old && result is SocketGuildUser user)
+                if (old.Nickname != user.Nickname)
+                {
+                    var nick = user.Nickname.ToLower();
+                    if (nick.Contains("[c/") || nick.Contains("[i"))
+                    {
+                        await user.ModifyAsync(x => x.Nickname = user.Username);
+                        try
+                        {
+                            var channel = await user.CreateDMChannelAsync();
+                            await channel.SendMessageAsync(":warning: **Terraria One:**, Your nickname violates one of these naming rules and has been replaced with your normal username:\n` No color codes `\n` No item codes `");
+                        }
+                        catch { }
+                    }
+                }
+        }
+
         public async Task Log(LogMessage message)
         {
             Console.WriteLine(message.ToString());
-            await Task.CompletedTask;
-        }
-
-        private async Task Connected()
-        {
             await Task.CompletedTask;
         }
 

@@ -16,6 +16,12 @@ namespace Reporter
 
         public static async Task CommandHandler(SocketInteraction args)
         {
+            var user = args.User as SocketGuildUser;
+            if (!user.HasRole("Staff"))
+            {
+                await args.RespondAsync("You do not have the permission to run Reporter commands.", null, false, true);
+                return;
+            }
             var cmd = args as SocketSlashCommand;
             switch(cmd.Data.Name)
             {
@@ -55,20 +61,18 @@ namespace Reporter
                 builder.WithTitle("Invalid syntax");
                 builder.WithDescription($"Invalid type. Valid types are: ` {string.Join(", ", RTypes)} `");
                 Embed[] embeds = { builder.Build() };
-                await args.RespondAsync(embeds);
+                await args.RespondAsync("", embeds);
                 return;
             }
 
-            var time = Extensions.SetReportTime(data[2].Value.ToString());
-            if (time == null)
+            if (!new Time().GetFromString((string)data[2].Value, out DateTime reporttime))
             {
                 builder.WithTitle("Invalid syntax");
-                builder.WithDescription("Invalid time string. The format is: ` dd.hh:mm:ss `");
+                builder.WithDescription("Invalid time string.");
                 Embed[] embeds = { builder.Build() };
-                await args.RespondAsync(embeds);
+                await args.RespondAsync("", embeds);
                 return;
             }
-            DateTime reporttime = DateTime.UtcNow.Subtract((TimeSpan)time);
 
             // actual command execution
             var component = new ComponentBuilder()
@@ -90,7 +94,7 @@ namespace Reporter
             Extensions.PendingDBEntries.Add($"{args.User.Id}|{data[0].Value}|{type}|{reporttime}|{data[3].Value}|{data[4].Value}" + ((data.Length > 5) ? $"|{data[5].Value}" : ""));
 
             Embed[] em = { builder.Build() };
-            await args.RespondAsync(em, null, false, InteractionResponseType.ChannelMessageWithSource, false, null, null, component.Build());
+            await args.RespondAsync("", em, false, false, null, null, component.Build());
         }
 
         private static async Task ReportInfo(SocketSlashCommand args)
@@ -106,7 +110,7 @@ namespace Reporter
                 builder.WithTitle("Invalid syntax");
                 builder.WithDescription("This report ID is invalid, please try again by specifying a valid ID.");
                 Embed[] embeds = { builder.Build() };
-                await args.RespondAsync(embeds);
+                await args.RespondAsync("", embeds);
                 return;
             }
 
@@ -126,7 +130,7 @@ namespace Reporter
                 builder.WithImageUrl(reportbyid.ProofURLs.First());
 
             Embed[] em = { builder.Build() };
-            await args.RespondAsync(em, null, false, InteractionResponseType.ChannelMessageWithSource, false, null, null, component.Build());
+            await args.RespondAsync("", em, false, false, null, null, component.Build());
         }
 
         private static async Task PlayerInfo(SocketSlashCommand args)
@@ -142,7 +146,7 @@ namespace Reporter
                 builder.WithTitle("Invalid syntax");
                 builder.WithDescription($"I found no matches for player: ` {plr} `. Are you sure the name correctly spelled?");
                 Embed[] embeds = { builder.Build() };
-                await args.RespondAsync(embeds);
+                await args.RespondAsync("", embeds);
                 return;
             }
 
@@ -159,7 +163,7 @@ namespace Reporter
             builder.AddField("Last punishment given:", reports.Last().Punishment);
             builder.AddField($"Reports [{ids.Count}]:", string.Join("\n", ids));
             Embed[] em = { builder.Build() };
-            await args.RespondAsync(em);
+            await args.RespondAsync("", em);
         }
 
         private static async Task EditReport(SocketSlashCommand args)
@@ -175,7 +179,7 @@ namespace Reporter
                 builder.WithTitle("Invalid syntax");
                 builder.WithDescription("This report ID is invalid, please try again by specifying a valid ID.");
                 Embed[] embeds = { builder.Build() };
-                await args.RespondAsync(embeds);
+                await args.RespondAsync("", embeds);
                 return;
             }
 
@@ -231,7 +235,7 @@ namespace Reporter
             }
             Data.Reports.SaveUsers();
             Embed[] em = { builder.Build() };
-            await args.RespondAsync(em);
+            await args.RespondAsync("", em);
         }
         private static async Task Reports(SocketSlashCommand args)
         {
@@ -253,7 +257,7 @@ namespace Reporter
                 builder.WithTitle("Invalid syntax");
                 builder.WithDescription("The page value can't be less than 1.");
                 Embed[] embeds = { builder.Build() };
-                await args.RespondAsync(embeds);
+                await args.RespondAsync("", embeds);
                 return;
             }
             var pages = reports.Count.RoundUp() / 10;
@@ -264,7 +268,7 @@ namespace Reporter
                 builder.WithTitle("Invalid syntax");
                 builder.WithDescription("The page value can't be greater than the amount of existing reports.");
                 Embed[] embeds = { builder.Build() };
-                await args.RespondAsync(embeds);
+                await args.RespondAsync("", embeds);
                 return;
             }
 
@@ -289,7 +293,7 @@ namespace Reporter
             builder.AddField($"Reports:", sb.ToString());
 
             Embed[] em = { builder.Build() };
-            await args.RespondAsync(em, null, false, InteractionResponseType.ChannelMessageWithSource, false, null, null, component.Build());
+            await args.RespondAsync("", em, false, false, null, null, component.Build());
         }
 
         private static async Task ReporterInfo(SocketSlashCommand args)
@@ -302,7 +306,13 @@ namespace Reporter
             var builder = new EmbedBuilder().Construct(args.User);
             builder.WithTitle($"Info about ` {user.Username} `");
 
-            builder.AddField("Position:", $"<@&{user.Roles.Last().Id}>");
+            List<string> roles = new();
+            foreach (var r in user.Roles)
+            {
+                if (!r.IsEveryone)
+                    roles.Add($"<@&{r.Id}>");
+            }
+            builder.AddField("Roles:", (roles.Any()) ? string.Join(", ", roles) : "None.");
 
             var reports = Data.Reports.GetReportByAgent(user.Id);
 
@@ -327,7 +337,7 @@ namespace Reporter
 
             builder.AddField($"Total reports [{reports.Count}]:", sb.ToString());
             Embed[] em = { builder.Build() };
-            await args.RespondAsync(em);
+            await args.RespondAsync("", em);
         }
     }
 }

@@ -51,7 +51,7 @@ namespace Reporter
             var message = args.Message;
             await message.ModifyAsync(x => x.Components = null);
             await message.ModifyAsync(x => x.Embed = builder.Build());
-            await args.AcknowledgeAsync();
+            await args.DeferAsync();
         }
 
         private static async Task Confirm(SocketMessageComponent args)
@@ -71,7 +71,7 @@ namespace Reporter
             var message = args.Message;
             await message.ModifyAsync(x => x.Components = component.Build());
             await message.ModifyAsync(x => x.Embed = builder.Build());
-            await args.AcknowledgeAsync();
+            await args.DeferAsync();
         }
 
         private static async Task Images(SocketMessageComponent args, string iid)
@@ -85,7 +85,7 @@ namespace Reporter
             if (report.ProofURLs.Count == 0)
                 builder.WithDescription("No images to display. Add images with ` {mention} addimage reportID image (or attach an image in the message youre sending");
             Embed[] embeds = { builder.Build() };
-            await args.RespondAsync(embeds);
+            await args.RespondAsync("", embeds);
             if (report.ProofURLs.Count != 0)
             {
                 foreach (var x in report.ProofURLs)
@@ -119,7 +119,7 @@ namespace Reporter
 
             await message.ModifyAsync(x => x.Components = component.Build());
             await message.ModifyAsync(x => x.Embed = builder.Build());
-            await args.AcknowledgeAsync();
+            await args.DeferAsync();
         }
 
         private static async Task ReportPages(SocketMessageComponent args, string ppage)
@@ -159,7 +159,7 @@ namespace Reporter
             builder.AddField($"Reports:", sb.ToString());
             await message.ModifyAsync(x => x.Components = component.Build());
             await message.ModifyAsync(x => x.Embed = builder.Build());
-            await args.AcknowledgeAsync();
+            await args.DeferAsync();
         }
     }
 }
