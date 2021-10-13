@@ -12,42 +12,31 @@ namespace Reporter
 {
     public class Commands
     {
-        private static string[] RTypes = { "Grief", "Tunnel", "Hack", "Chat",  "Other" };
+        private readonly string[] RTypes = { "Grief", "Tunnel", "Hack", "Chat", "Other" };
 
-        public static async Task CommandHandler(SocketInteraction args)
+        private readonly Dictionary<string, Func<SocketSlashCommand, Task>> CallbackHandler = new();
+
+        public Commands()
         {
-            var user = args.User as SocketGuildUser;
-            if (!user.HasRole("Staff"))
-            {
-                await args.RespondAsync("You do not have the permission to run Reporter commands.", null, false, true);
-                return;
-            }
-            var cmd = args as SocketSlashCommand;
-            switch(cmd.Data.Name)
-            {
-                case "reportinfo":
-                    await ReportInfo(cmd);
-                    break;
-                case "report":
-                    await Report(cmd);
-                    break;
-                case "playerinfo":
-                    await PlayerInfo(cmd);
-                    break;
-                case "editreport":
-                    await EditReport(cmd);
-                    break;
-                case "reports":
-                    await Reports(cmd);
-                    break;
-                case "reporterinfo":
-                    await ReporterInfo(cmd);
-                    break;
-
-            }    
+            CallbackHandler["report"] = Report;
+            CallbackHandler["reportinfo"] = ReportInfo;
+            CallbackHandler["playerinfo"] = PlayerInfo;
+            CallbackHandler["editreport"] = EditReport;
+            CallbackHandler["reports"] = Reports;
+            CallbackHandler["reporterinfo"] = ReporterInfo;
         }
 
-        private static async Task Report(SocketSlashCommand args)
+        public async Task CommandHandler(SocketSlashCommand command)
+        {
+            var user = command.User as SocketGuildUser;
+            if (!user.HasRole("Staff"))
+                await command.RespondAsync("You do not have the permission to run Reporter commands.", null, false, true);
+            else if (CallbackHandler.TryGetValue(command.CommandName, out Func<SocketSlashCommand, Task> value))
+                await value(command);
+            else await command.RespondAsync(":warning: Unable to acknowledge entry defined by commandname. Please resolve this!");
+        }
+
+        private async Task Report(SocketSlashCommand args)
         {
             var data = args.Data.Options.ToArray();
 
@@ -91,21 +80,22 @@ namespace Reporter
                 builder.AddField("Note:", data[5].Value);
 
             //add a pending item in the pendingdblist
-            Extensions.PendingDBEntries.Add($"{args.User.Id}|{data[0].Value}|{type}|{reporttime}|{data[3].Value}|{data[4].Value}" + ((data.Length > 5) ? $"|{data[5].Value}" : ""));
+            Extensions.PendingEntries.Add(new Report(0, args.User.Id, data[0].Value.ToString(), type, reporttime, data[4].Value.ToString(), Convert.ToInt32((long)data[3].Value), (data.Length > 5) ? data[5].Value.ToString() : ""));
 
             Embed[] em = { builder.Build() };
             await args.RespondAsync("", em, false, false, null, null, component.Build());
         }
 
-        private static async Task ReportInfo(SocketSlashCommand args)
-        { 
+        private async Task ReportInfo(SocketSlashCommand args)
+        {
+            var manager = new ReportManager((args.Channel as IGuildChannel).GuildId);
+
             var data = args.Data.Options.ToArray();
             int id = int.Parse(data.First().Value.ToString());
-            var reportbyid = Data.Reports.GetReportByID(id);
 
             var builder = new EmbedBuilder().Construct(args.User);
 
-            if (reportbyid == null)
+            if (!manager.GetReportByID(id, out Report reportbyid))
             {
                 builder.WithTitle("Invalid syntax");
                 builder.WithDescription("This report ID is invalid, please try again by specifying a valid ID.");
@@ -126,22 +116,24 @@ namespace Reporter
             builder.AddField("Punishment:", reportbyid.Punishment, true);
             if (reportbyid.Note != "")
                 builder.AddField("Note:", reportbyid.Note);
-            if (reportbyid.ProofURLs.Count != 0)
+            if (reportbyid.ProofURLs.Any())
                 builder.WithImageUrl(reportbyid.ProofURLs.First());
 
             Embed[] em = { builder.Build() };
             await args.RespondAsync("", em, false, false, null, null, component.Build());
         }
 
-        private static async Task PlayerInfo(SocketSlashCommand args)
+        private async Task PlayerInfo(SocketSlashCommand args)
         {
+            var manager = new ReportManager((args.Channel as IGuildChannel).GuildId);
+
             var data = args.Data.Options.ToArray();
             string plr = data.First().Value.ToString();
-            var reports = Data.Reports.GetReports(plr);
+            var reports = manager.GetReports(plr);
 
             var builder = new EmbedBuilder().Construct(args.User);
 
-            if (reports.Count == 0)
+            if (!reports.Any())
             {
                 builder.WithTitle("Invalid syntax");
                 builder.WithDescription($"I found no matches for player: ` {plr} `. Are you sure the name correctly spelled?");
@@ -166,15 +158,16 @@ namespace Reporter
             await args.RespondAsync("", em);
         }
 
-        private static async Task EditReport(SocketSlashCommand args)
+        private async Task EditReport(SocketSlashCommand args)
         {
+            var manager = new ReportManager((args.User as IGuildUser).GuildId);
+
             var data = args.Data.Options.ToArray();
             int id = int.Parse(data.First().Value.ToString());
-            var reportbyid = Data.Reports.GetReportByID(id);
 
             var builder = new EmbedBuilder().Construct(args.User);
 
-            if (reportbyid == null)
+            if (!manager.GetReportByID(id, out Report reportbyid))
             {
                 builder.WithTitle("Invalid syntax");
                 builder.WithDescription("This report ID is invalid, please try again by specifying a valid ID.");
@@ -233,12 +226,14 @@ namespace Reporter
                         break;
                 }
             }
-            Data.Reports.SaveUsers();
+            manager.SaveUsers();
             Embed[] em = { builder.Build() };
             await args.RespondAsync("", em);
         }
-        private static async Task Reports(SocketSlashCommand args)
+        private async Task Reports(SocketSlashCommand args)
         {
+            var manager = new ReportManager((args.User as IGuildUser).GuildId);
+
             int page = 1;
             if (args.Data.Options != null)
             {
@@ -250,7 +245,7 @@ namespace Reporter
             builder.WithTitle("Report list");
             builder.WithDescription($"Currently viewing page: ` {page} `");
 
-            var reports = Data.Reports.GetAllReports();
+            var reports = manager.GetAllReports();
 
             if (page < 1)
             {
@@ -278,7 +273,7 @@ namespace Reporter
                 .WithButton("Previous page", $"id_page|{args.User.Id}|{page - 1}", ButtonStyle.Danger, null, null, (page - 1 == 0) ? true : false)
                 .WithButton("Next page", $"id_page|{args.User.Id}|{page + 1}", ButtonStyle.Success, null, null, (page >= pages) ? true : false);
 
-            var users = new List<User>();
+            var users = new List<Report>();
             users.AddRange(reports.FindAll(x => x.ID >= max - 9 && x.ID <= max));
             users.Reverse();
             StringBuilder sb = new();
@@ -296,13 +291,13 @@ namespace Reporter
             await args.RespondAsync("", em, false, false, null, null, component.Build());
         }
 
-        private static async Task ReporterInfo(SocketSlashCommand args)
+        private async Task ReporterInfo(SocketSlashCommand args)
         {
             SocketGuildUser user = args.User as SocketGuildUser;
-            if (args.Data.Options != null)
-            {
+
+            var manager = new ReportManager(user.Guild.Id);
+            if (args.Data.Options.Any())
                 user = (SocketGuildUser)args.Data.Options.ToArray().FirstOrDefault().Value;
-            }
             var builder = new EmbedBuilder().Construct(args.User);
             builder.WithTitle($"Info about ` {user.Username} `");
 
@@ -314,7 +309,7 @@ namespace Reporter
             }
             builder.AddField("Roles:", (roles.Any()) ? string.Join(", ", roles) : "None.");
 
-            var reports = Data.Reports.GetReportByAgent(user.Id);
+            var reports = manager.GetReportByAgent(user.Id);
 
             reports.Reverse();
 

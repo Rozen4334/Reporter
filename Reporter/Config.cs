@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 
 namespace Reporter
 {
-    class Config
+    public class Config
     {
         public string BotToken;
 
@@ -32,6 +32,7 @@ namespace Reporter
 				return Default();
 			}
 		}
+
 		public static Config Default()
         {
 			return new Config()

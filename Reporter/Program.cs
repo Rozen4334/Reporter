@@ -10,17 +10,11 @@ using Reporter.Data;
 
 namespace Reporter
 {
-    class Program
+    public class Program
     {
         public static Config Settings = Config.Read();
 
         public static DiscordSocketClient Client;
-        private static readonly DiscordSocketConfig _ClientConfig = new()
-        {
-            MessageCacheSize = 100,
-            AlwaysDownloadUsers = true,
-            GatewayIntents = GatewayIntents.All,
-        };
 
         private bool _RetryConnection = true;
         private const int _RetryInterval = 1000;
@@ -32,7 +26,6 @@ namespace Reporter
 
         public async Task RunAsync()
         {
-            // checking for invalid run state.
             if (Client != null)
             {
                 if (Client.ConnectionState == ConnectionState.Connecting ||
@@ -40,13 +33,16 @@ namespace Reporter
                     return;
             }
 
-            // set the empty variables, override the preset variables.
-            Client = new DiscordSocketClient(_ClientConfig);
+            Client = new(new()
+            {
+                MessageCacheSize = 100,
+                AlwaysDownloadUsers = true,
+                GatewayIntents = GatewayIntents.All,
+            });
 
             _RetryConnection = true;
             _Running = false;
 
-            // while for client connection.
             while (true)
             {
                 try
@@ -56,7 +52,7 @@ namespace Reporter
 
                     await Client.StartAsync();
 
-                    await Initialize();
+                    await SetEvents();
 
                     _Running = true;
 
@@ -66,15 +62,12 @@ namespace Reporter
                 {
                     await Log(new LogMessage(LogSeverity.Error, "RunAsync", "Failed to connect."));
                     if (_RetryConnection == false)
-                    {
                         return;
-                    }
-                    // making sure the client retries to connect and doesnt escape the while
+
                     await Task.Delay(_RetryInterval);
                 }
             }
 
-            // while for breaking the connection in case it disconnects
             while (_Running) { await Task.Delay(_RunningInterval); }
 
             if (Client.ConnectionState == ConnectionState.Connecting ||
@@ -85,12 +78,11 @@ namespace Reporter
             }
         }
 
-        private async Task Initialize()
+        private async Task SetEvents()
         {
             if (Client.LoginState != LoginState.LoggedIn)
                 return;
 
-            // Message recieved & command handler.
             Client.MessageReceived += MessageReceived;
             Client.InteractionCreated += InteractionRecieved;
             Client.UserUpdated += UserUpdated;
@@ -103,61 +95,67 @@ namespace Reporter
 
         private async Task MessageReceived(SocketMessage args)
         {
-            // pass the message on as usermessage
-            var message = args as SocketUserMessage;
-            if (message == null) return;
-            int argPos = 0;
-            if (message.HasMentionPrefix(Client.CurrentUser, ref argPos))
+            if (args is SocketUserMessage message)
             {
+                if (message == null)
+                    return;
+                int argPos = 0;
+
+                if (!message.HasMentionPrefix(Client.CurrentUser, ref argPos))
+                    return;
+
                 if (args.Author is SocketGuildUser user)
                 {
                     if (!user.HasRole("Staff"))
                         return;
+
                     if (message.Content.Contains("writeappcommands"))
                     {
-                        if (message.Channel is ITextChannel channel)
-                        {
-                            await Extensions.WriteAppCommands(channel.Guild);
-                            await channel.SendMessageAsync("Succesfully created application commands. Ready for use!");
-                        }
+                        await Extensions.WriteAppCommands(user.Guild);
+                        await message.ReplyAsync("Succesfully created application commands. Ready for use!", 
+                            false, null, new AllowedMentions() { MentionRepliedUser = true });
                     }
                     if (message.Content.Contains("deleteappcommands"))
                     {
-                        if (message.Channel is ITextChannel channel)
-                        {
-                            await Extensions.RemoveAppCommands(channel.Guild);
-                            await channel.SendMessageAsync("Succesfully removed application commands. Use ` {mention} writeappcommands ` to write all app commands");
-                        }
+                        await Extensions.RemoveAppCommands(user.Guild);
+                        await message.ReplyAsync("Succesfully removed application commands. Use ` {mention} writeappcommands ` to write all app commands", 
+                            false, null, new AllowedMentions() { MentionRepliedUser = true });
                     }
                     if (message.Content.Contains("addimage"))
                     {
-                        if (message.Channel is ITextChannel channel)
+                        string[] input = message.Content.Trim().Split(' ');
+
+                        if (input.Length > 4)
                         {
-                            string[] input = message.Content.Trim().Split(' ');
+                            await message.ReplyAsync("Invalid syntax, only add one image per execution.", 
+                                false, null, new AllowedMentions() { MentionRepliedUser = true });
+                            return;
+                        }
 
-                            if (input.Length > 4)
+                        if (int.TryParse(input[2], out int id))
+                        {
+                            var manager = new ReportManager(user.Guild.Id);
+
+                            if (manager.GetReportByID(id, out Report report))
                             {
-                                await channel.SendMessageAsync("Invalid syntax, only add one image per execution.");
-                                return;
-                            }
-
-                            if (int.TryParse(input[2], out int id))
-                            {
-                                var report = Reports.GetReportByID(id);
-
-                                if (message.Attachments.Count != 0)
+                                if (message.Attachments.Any())
                                 {
-                                    foreach (var x in message.Attachments)
-                                    {
-                                        report.ProofURLs.Add(x.Url);
-                                    }
-                                    Reports.SaveUsers();
-                                    await channel.SendMessageAsync("Succesfully added image(s) to report.");
+                                    report.AddImages(message.Attachments.ToList());
+                                    manager.SaveUsers();
+                                    await message.ReplyAsync("Succesfully added image(s) to report.", 
+                                        false, null, new AllowedMentions() { MentionRepliedUser = true });
                                     return;
                                 }
                                 report.ProofURLs.Add(input[3]);
-                                await channel.SendMessageAsync("Succesfully added image to report.");
-                                Reports.SaveUsers();
+                                await message.ReplyAsync("Succesfully added image to report.", 
+                                    false, null, new AllowedMentions() { MentionRepliedUser = true });
+                                manager.SaveUsers();
+                            }
+                            else
+                            {
+                                await message.ReplyAsync("This report ID is invalid, please try again by specifying a valid ID.", 
+                                    false, null, new AllowedMentions() { MentionRepliedUser = true });
+                                return;
                             }
                         }
                     }
@@ -167,15 +165,10 @@ namespace Reporter
 
         private async Task InteractionRecieved(SocketInteraction args)
         {
-            switch(args.Type)
-            {
-                case InteractionType.ApplicationCommand:
-                        await Commands.CommandHandler(args);
-                    break;
-                case InteractionType.MessageComponent:
-                        await Interactions.InteractionHandler(args);
-                    break;
-            }
+            if (args is SocketSlashCommand command)
+                await new Commands().CommandHandler(command);
+            else if (args is SocketMessageComponent component)
+                await new Components().InteractionHandler(component);
         }
 
         private async Task UserUpdated(SocketUser entry, SocketUser result)
@@ -190,22 +183,17 @@ namespace Reporter
                         try
                         {
                             var channel = await user.CreateDMChannelAsync();
-                            await channel.SendMessageAsync(":warning: **Terraria One:**, Your nickname violates one of these naming rules and has been replaced with your normal username:\n` No color codes `\n` No item codes `");
+                            await channel.SendMessageAsync($":warning: **{user.Guild.Name}**, Your nickname violates one of these naming rules and has been replaced with your normal username:\n` No color codes `\n` No item codes `");
                         }
-                        catch { }
+                        catch { throw; }
                     }
                 }
         }
 
-        public async Task Log(LogMessage message)
-        {
-            Console.WriteLine(message.ToString());
-            await Task.CompletedTask;
-        }
+        private async Task Log(LogMessage message)
+            => Console.WriteLine(message.ToString());
 
         private async Task Ready()
-        {
-            await Client.SetGameAsync($" over T1", null, ActivityType.Watching);
-        }
+            => await Client.SetGameAsync($" over T1", null, ActivityType.Watching);
     }
 }

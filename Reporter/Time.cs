@@ -9,6 +9,9 @@ namespace Reporter
 {
     public class Time
     {
+        private delegate TimeSpan CallBackDelegate(string match);
+        private readonly Dictionary<string, CallBackDelegate> SpanCallback = new();
+
         public Time()
         {
             SpanCallback["second"] = Seconds;
@@ -37,10 +40,6 @@ namespace Reporter
             SpanCallback["months"] = Months;
         }
 
-        delegate TimeSpan CallBackDelegate(string match);
-
-        readonly Dictionary<string, CallBackDelegate> SpanCallback = new();
-
         private TimeSpan Seconds(string match)
             => new(0, 0, int.Parse(match));
 
@@ -61,38 +60,20 @@ namespace Reporter
 
         private readonly Regex Regex = new(@"(\d*)\s*([a-zA-Z]*)\s*(?:and|,)?\s*");
 
-        /// <summary>
-        /// Gets a valid <see cref="TimeSpan"/> from the provided <c>string</c>.
-        /// </summary>
-        /// <param name="input">The disposable <c>string</c> where the timespan originates from</param>
-        /// <returns>A <see cref="TimeSpan"/> struct. that holds all valid entries from the provided <c>string</c>.</returns>
-        public TimeSpan GetSpanFromString(string input)
+        private TimeSpan GetSpanFromString(string input)
         {
             if (!TimeSpan.TryParse(input, out TimeSpan span))
             {
                 _ = input.ToLower().Trim();
                 MatchCollection matches = Regex.Matches(input);
                 if (matches.Any())
-                {
                     foreach (Match match in matches)
-                    {
                         if (SpanCallback.TryGetValue(match.Groups[2].Value, out CallBackDelegate callback))
-                        {
-                            Console.WriteLine(span);
                             span += callback(match.Groups[1].Value);
-                        }
-                    }
-                }
             }
             return span;
         }
 
-        /// <summary>
-        /// Gets a valid <see cref="DateTime"/> from the provided <c>string</c>.
-        /// </summary>
-        /// <param name="input">The disposable <c>string</c> where the timespan originates from</param>
-        /// <param name="time">An optional <see cref="DateTime"/> entry to match the originating <see cref="TimeSpan"/> with</param>
-        /// <returns>A <see cref="DateTime"/> struct. that holds all valid entries from the provided <c>string</c> summed with the optional <paramref name="time"/></returns>
         public bool GetFromString(string input, out DateTime time)
         {
             var span = GetSpanFromString(input);

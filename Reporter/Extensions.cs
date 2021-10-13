@@ -11,17 +11,7 @@ namespace Reporter
 {
     public static class Extensions
     {
-        /// <summary>
-        /// string.Split('|')
-        /// i[0] = IUser id;
-        /// i[1] = TSPlr name;
-        /// i[2] = Type;
-        /// i[3] = Time;
-        /// i[4] = Blocksbroken;
-        /// i[5] = Punishment;
-        /// i[6] = Note;
-        /// </summary>
-        public static List<string> PendingDBEntries = new();
+        public static List<Report> PendingEntries = new();
 
         public static bool HasRole(this SocketGuildUser user, string roleName)
         {
@@ -46,7 +36,7 @@ namespace Reporter
             return input;
         }
 
-        public static SlashCommandBuilder[] Builders =
+        public readonly static SlashCommandBuilder[] Builders =
         {
             new SlashCommandBuilder()
                 .WithName("report")
