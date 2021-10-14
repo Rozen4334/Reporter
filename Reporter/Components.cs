@@ -20,6 +20,7 @@ namespace Reporter
             CallbackHandler["id_img"] = Images;
             CallbackHandler["id_view"] = ViewReport;
             CallbackHandler["id_page"] = ReportPages;
+            CallbackHandler["id_viewall"] = ViewAll;
         }
         public async Task InteractionHandler(SocketMessageComponent component)
         {
@@ -87,7 +88,7 @@ namespace Reporter
             if (manager.GetReportByID(id, out Report report))
             {
                 if (!report.ProofURLs.Any())
-                    builder.WithDescription("No images to display. Add images with ` {mention} addimage reportID image (or attach an image in the message youre sending");
+                    builder.WithDescription("No images to display. Add images with ` @reporter addimage <reportID> <image> ` (or attach an image in the message youre sending");
                 Embed[] embeds = { builder.Build() };
                 await args.RespondAsync("", embeds);
                 if (report.ProofURLs.Any())
@@ -106,7 +107,9 @@ namespace Reporter
 
             if (manager.GetReportByID(id, out Report reportbyid))
             {
-                var component = new ComponentBuilder().WithButton("View images", $"id_img|{args.User.Id}|{reportbyid.ID}");
+                var component = new ComponentBuilder()
+                    .WithButton("View images", $"id_img|{args.User.Id}|{reportbyid.ID}")
+                    .WithButton("View all reports", $"id_img|{args.User.Id}|{reportbyid.Username}", ButtonStyle.Secondary, new Emoji("📃"));
 
                 builder.WithTitle($"Report: ` {reportbyid.ID} `");
                 builder.AddField("User:", reportbyid.Username, true);
@@ -124,6 +127,38 @@ namespace Reporter
                 await message.ModifyAsync(x => x.Embed = builder.Build());
                 await args.DeferAsync();
             }
+        }
+
+        private async Task ViewAll(SocketMessageComponent args, string iid)
+        {
+            var manager = new ReportManager((args.User as IGuildUser).GuildId);
+            var builder = new EmbedBuilder().Construct(args.User);
+            var reports = manager.GetReports(iid);
+            var message = args.Message;
+
+            if (reports.Any())
+            {
+                builder.WithTitle($"User information: ` {iid} `");
+                builder.WithDescription($"I have found ` {reports.Count} ` report(s) for specified user.");
+                int blocks = 0;
+                List<string> ids = new();
+                foreach (var x in reports)
+                {
+                    blocks += x.BlocksBroken;
+                    ids.Add($"` {x.ID} ` - type: {x.Type}");
+                }
+                builder.AddField("Total blocks broken:", (blocks != 0) ? blocks : "None");
+                builder.AddField("Last punishment given:", reports.Last().Punishment);
+                builder.AddField($"Reports [{ids.Count}]:", string.Join("\n", ids));
+            }
+            else
+            {
+                builder.WithTitle($"No reports found!");
+                builder.WithDescription("This user does not have any known reports.");
+            }
+            await message.ModifyAsync(x => x.Components = null);
+            await message.ModifyAsync(x => x.Embed = builder.Build());
+            await args.DeferAsync();
         }
 
         private async Task ReportPages(SocketMessageComponent args, string ppage)

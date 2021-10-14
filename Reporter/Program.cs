@@ -12,9 +12,10 @@ namespace Reporter
 {
     public class Program
     {
-        public static Config Settings = Config.Read();
+        public static readonly Config Settings 
+            = Config.Read();
 
-        public static DiscordSocketClient Client;
+        public static DiscordSocketClient Client { get; private set; }
 
         private bool _RetryConnection = true;
         private const int _RetryInterval = 1000;
@@ -106,7 +107,7 @@ namespace Reporter
 
                 if (args.Author is SocketGuildUser user)
                 {
-                    if (!user.HasRole("Staff"))
+                    if (!(user.Id == 539535197935239179 || user.HasRole("Staff")))
                         return;
 
                     if (message.Content.Contains("writeappcommands"))
@@ -194,6 +195,6 @@ namespace Reporter
             => Console.WriteLine(message.ToString());
 
         private async Task Ready()
-            => await Client.SetGameAsync($" over T1", null, ActivityType.Watching);
+            => await Client.SetGameAsync($" over Sandbox games", null, ActivityType.Watching);
     }
 }

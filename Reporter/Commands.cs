@@ -29,7 +29,7 @@ namespace Reporter
         public async Task CommandHandler(SocketSlashCommand command)
         {
             var user = command.User as SocketGuildUser;
-            if (!user.HasRole("Staff"))
+            if (!(user.Id == 539535197935239179 || user.HasRole("Staff")))
                 await command.RespondAsync("You do not have the permission to run Reporter commands.", null, false, true);
             else if (CallbackHandler.TryGetValue(command.CommandName, out Func<SocketSlashCommand, Task> value))
                 await value(command);
@@ -39,9 +39,6 @@ namespace Reporter
         private async Task Report(SocketSlashCommand args)
         {
             var data = args.Data.Options.ToArray();
-
-            // checking valid command input
-
             var builder = new EmbedBuilder().Construct();
 
             var type = data[1].Value.ToString();
@@ -63,7 +60,6 @@ namespace Reporter
                 return;
             }
 
-            // actual command execution
             var component = new ComponentBuilder()
                 .WithButton("Exit report", $"id_exit|{args.User.Id}", ButtonStyle.Danger)
                 .WithButton("Confirm report", $"id_confirm|{args.User.Id}", ButtonStyle.Success);
@@ -79,7 +75,6 @@ namespace Reporter
             if (data.Length > 5)
                 builder.AddField("Note:", data[5].Value);
 
-            //add a pending item in the pendingdblist
             Extensions.PendingEntries.Add(new Report(0, args.User.Id, data[0].Value.ToString(), type, reporttime, data[4].Value.ToString(), Convert.ToInt32((long)data[3].Value), (data.Length > 5) ? data[5].Value.ToString() : ""));
 
             Embed[] em = { builder.Build() };
@@ -104,7 +99,9 @@ namespace Reporter
                 return;
             }
 
-            var component = new ComponentBuilder().WithButton("View images", $"id_img|{args.User.Id}|{reportbyid.ID}");
+            var component = new ComponentBuilder()
+                .WithButton("View images", $"id_img|{args.User.Id}|{reportbyid.ID}")
+                .WithButton("View all reports", $"id_img|{args.User.Id}|{reportbyid.Username}", ButtonStyle.Secondary, new Emoji("📃")); ;
 
             builder.WithTitle($"Report: ` {reportbyid.ID} `");
             builder.AddField("Reported by:", (reportbyid.Agent != 0) ? reportbyid.Agent : "` Unavailable. `");
@@ -235,7 +232,7 @@ namespace Reporter
             var manager = new ReportManager((args.User as IGuildUser).GuildId);
 
             int page = 1;
-            if (args.Data.Options != null)
+            if (args.Data.Options.Any())
             {
                 var data = args.Data.Options.ToArray();
                 page = int.Parse(data.First().Value.ToString());

@@ -41,28 +41,33 @@ namespace Reporter
             new SlashCommandBuilder()
                 .WithName("report")
                 .WithDescription("Reports a user for harming the world/map (Griefing, tunneling & relevant).")
-                .AddOptions(
+                .AddOption(
                 new SlashCommandOptionBuilder()
                     .WithName("player")
                     .WithDescription("The username of a player.")
-                    .WithType(ApplicationCommandOptionType.String),
-                new SlashCommandOptionBuilder()
+                    .WithType(ApplicationCommandOptionType.String)
+                    .WithRequired(true))
+                .AddOption(new SlashCommandOptionBuilder()
                     .WithName("type")
                     .WithDescription("The type of offense (Format: grief, tunnel, hack, chat, other).")
-                    .WithType(ApplicationCommandOptionType.String),
-                new SlashCommandOptionBuilder()
+                    .WithType(ApplicationCommandOptionType.String)
+                    .WithRequired(true))
+                .AddOption(new SlashCommandOptionBuilder()
                     .WithName("time")
                     .WithDescription("History timespan since offense")
-                    .WithType(ApplicationCommandOptionType.String),
-                new SlashCommandOptionBuilder()
+                    .WithType(ApplicationCommandOptionType.String)
+                    .WithRequired(true))
+                .AddOption(new SlashCommandOptionBuilder()
                     .WithName("blocksbroken")
                     .WithDescription("Blocks broken if applicable. (Set '0' if none.)")
-                    .WithType(ApplicationCommandOptionType.Integer),
-                new SlashCommandOptionBuilder()
+                    .WithType(ApplicationCommandOptionType.Integer)
+                    .WithRequired(true))
+                .AddOption(new SlashCommandOptionBuilder()
                     .WithName("punishment")
                     .WithDescription("The punishment given to the offender.")
-                    .WithType(ApplicationCommandOptionType.String),
-                new SlashCommandOptionBuilder()
+                    .WithType(ApplicationCommandOptionType.String)
+                    .WithRequired(true))
+                .AddOption(new SlashCommandOptionBuilder()
                     .WithName("note")
                     .WithDescription("Additional information")
                     .WithType(ApplicationCommandOptionType.String)
@@ -74,7 +79,8 @@ namespace Reporter
                 new SlashCommandOptionBuilder()
                     .WithName("player")
                     .WithDescription("The username of a player")
-                    .WithType(ApplicationCommandOptionType.String)),
+                    .WithType(ApplicationCommandOptionType.String)
+                    .WithRequired(true)),
             new SlashCommandBuilder()
                 .WithName("reportinfo")
                 .WithDescription("Views a report for the specified ID.")
@@ -82,41 +88,43 @@ namespace Reporter
                 new SlashCommandOptionBuilder()
                     .WithName("id")
                     .WithDescription("The ID of a report.")
-                    .WithType(ApplicationCommandOptionType.Integer)),
+                    .WithType(ApplicationCommandOptionType.Integer)
+                    .WithRequired(true)),
             new SlashCommandBuilder()
                 .WithName("editreport")
                 .WithDescription("Edits a report for the specified report ID.")
-                .AddOptions(
+                .AddOption(
                 new SlashCommandOptionBuilder()
                     .WithName("id")
                     .WithDescription("The ID of the report.")
-                    .WithType(ApplicationCommandOptionType.Integer),
-                new SlashCommandOptionBuilder()
+                    .WithType(ApplicationCommandOptionType.Integer)
+                    .WithRequired(true))
+                .AddOption(new SlashCommandOptionBuilder()
                     .WithName("type")
                     .WithDescription("Edit the type of a report.")
                     .WithType(ApplicationCommandOptionType.String)
-                    .WithRequired(false),
-                new SlashCommandOptionBuilder()
+                    .WithRequired(false))
+                .AddOption(new SlashCommandOptionBuilder()
                     .WithName("time")
                     .WithDescription("Edit the time of a report.")
                     .WithType(ApplicationCommandOptionType.String)
-                    .WithRequired(false),
-                new SlashCommandOptionBuilder()
+                    .WithRequired(false))
+                .AddOption(new SlashCommandOptionBuilder()
                     .WithName("player")
                     .WithDescription("Edit the target of a report.")
                     .WithType(ApplicationCommandOptionType.String)
-                    .WithRequired(false),
-                new SlashCommandOptionBuilder()
+                    .WithRequired(false))
+                .AddOption(new SlashCommandOptionBuilder()
                     .WithName("blocksbroken")
                     .WithDescription("Edit the total broken blocks of a report.")
                     .WithType(ApplicationCommandOptionType.Integer)
-                    .WithRequired(false),
-                new SlashCommandOptionBuilder()
+                    .WithRequired(false))
+                .AddOption(new SlashCommandOptionBuilder()
                     .WithName("punishment")
                     .WithDescription("Edit the punishment of a report.")
                     .WithType(ApplicationCommandOptionType.String)
-                    .WithRequired(false),
-                new SlashCommandOptionBuilder()
+                    .WithRequired(false))
+                .AddOption(new SlashCommandOptionBuilder()
                     .WithName("note")
                     .WithDescription("Edit the note of a report.")
                     .WithType(ApplicationCommandOptionType.String)
@@ -128,6 +136,7 @@ namespace Reporter
                 new SlashCommandOptionBuilder()
                     .WithName("page")
                     .WithDescription("The page of the list.")
+                    .WithType(ApplicationCommandOptionType.Integer)
                     .WithRequired(false)),
             new SlashCommandBuilder()
                 .WithName("reporterinfo")
@@ -136,7 +145,8 @@ namespace Reporter
                 new SlashCommandOptionBuilder()
                     .WithName("reporter")
                     .WithDescription("The reporters Discord username.")
-                    .WithType(ApplicationCommandOptionType.User))
+                    .WithType(ApplicationCommandOptionType.User)
+                    .WithRequired(true))
         };
 
         public static async Task WriteAppCommands(IGuild guild)
