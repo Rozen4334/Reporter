@@ -7,7 +7,7 @@ public static class Extensions
     /// <summary>
     /// Pending reports that need to be confirmed
     /// </summary>
-    public static List<Report> Pending = new();
+    public static readonly List<Report> Pending = new();
 
     /// <summary>
     /// Checks if a user has a role or not

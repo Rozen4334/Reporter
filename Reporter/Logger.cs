@@ -100,7 +100,7 @@ public class Logger
     /// <param name="severity"></param>
     /// <param name="exception"></param>
     /// <param name="writeConsole"></param>
-    public void Log(object message, string? source = null, LogSeverity severity = LogSeverity.Info, Exception? exception = null, bool? writeConsole = null)
+    public void Log<T>(object message, string? source = null, LogSeverity severity = LogSeverity.Info, Exception? exception = null, bool? writeConsole = null) where T : class
         => _ = Task.Run(async () => await LogAsync(new LogMessage(severity, source ?? "Gateway", message.ToString(), exception), writeConsole));
 
     /// <summary>

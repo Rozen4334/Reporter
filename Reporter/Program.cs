@@ -16,6 +16,8 @@ public class Program
     // Log instance
     private readonly Logger _logger;
 
+    #region Display
+
     /// <summary>
     /// Version
     /// </summary>
@@ -39,6 +41,8 @@ public class Program
     /// </summary>
     public string Description { get; } 
         = "A Discord reporter bot for sandbox game servers.";
+
+    #endregion
 
     /// <summary>
     /// Ctor
@@ -94,45 +98,50 @@ public class Program
     // Client message received
     private async Task MessageReceived(SocketMessage arg)
     {
+        // if message is of type user
         if (arg is not SocketUserMessage message)
             return;
+
+        // if author is in guild or not
         if (message.Author is not SocketGuildUser user)
             return;
 
+        // if message starts with @reporter mention
         int argPos = 0;
         if (!message.HasMentionPrefix(_client.CurrentUser, ref argPos))
             return;
-        if (!(user.Id == 539535197935239179 || user.HasRole("Staff")))
+
+        // if user is of staff or whitelisted in config
+        if (!(user.HasRole("Staff") || Config.Settings.WhitelistedUsers.Any(x => x == user.Id)))
             return;
-        if (message.Content.Contains("addimage"))
+
+        // if commandname is addimage
+        string[] param = message.Content.Trim().Split(' ');
+        if (param[1] != "addimage")
+            return;
+
+        if (long.TryParse(param[2], out long id))
         {
-            string[] param = message.Content.Trim().Split(' ');
+            var manager = new ReportManager(user.Guild.Id);
 
-            if (long.TryParse(param[2], out long id))
+            AllowedMentions target = new() { MentionRepliedUser = true };
+            if (manager.TryGetReport(id, out var report))
             {
-                var manager = new ReportManager(user.Guild.Id);
-
-                if (manager.TryGetReport(id, out var report))
+                if (message.Attachments.Any())
                 {
-                    if (message.Attachments.Any())
-                    {
-                        report.AddImages(message.Attachments);
-                        manager.SaveReports();
-                        await message.ReplyAsync("Succesfully added image(s) to report.",
-                            false, null, new AllowedMentions() { MentionRepliedUser = true });
-                        return;
-                    }
-                    report.AddImages(param[3..]);
-                    await message.ReplyAsync("Succesfully added image to report.",
-                        false, null, new AllowedMentions() { MentionRepliedUser = true });
+                    report.AddImages(message.Attachments);
                     manager.SaveReports();
-                }
-                else
-                {
-                    await message.ReplyAsync("This report ID is invalid, please try again by specifying a valid ID.",
-                        false, null, new AllowedMentions() { MentionRepliedUser = true });
+                    await message.ReplyAsync(":white_check_mark: **Succesfully added image(s) to report!**", allowedMentions: target);
                     return;
                 }
+                report.AddImages(param[3..]);
+                await message.ReplyAsync(":white_check_mark: **Succesfully added image(s) to report!**", allowedMentions: target);
+                manager.SaveReports();
+            }
+            else
+            {
+                await message.ReplyAsync(":x: **This report ID is invalid!** Please try again by specifying a valid ID.", allowedMentions: target);
+                return;
             }
         }
     }

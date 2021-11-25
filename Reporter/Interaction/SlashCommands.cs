@@ -96,7 +96,11 @@ public class SlashCommands
         if (_callback.TryGetValue(command.CommandName, out var result))
         {
             if (command.User is SocketGuildUser user)
-                await result(command, new(user.Guild.Id));
+            {
+                if (user.HasRole("Staff") || Config.Settings.WhitelistedUsers.Any(x => x == user.Id))
+                    await result(command, new(user.Guild.Id));
+                else await command.RespondAsync(":x: **Invalid permissions!** You do not have the permission to reporter commands.**");
+            }
             else await _logger.LogAsync("Callback cannot resolve user as guilduser, command has not been executed in guild.", nameof(SlashCommands), LogSeverity.Error);
         }
         else await _logger.LogAsync($"Callback cannot attach command to Task as: {command.CommandName}", nameof(SlashCommands), LogSeverity.Error);
