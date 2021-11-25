@@ -3,118 +3,163 @@ using Microsoft.Extensions.DependencyInjection;
 using Reporter.Data;
 using Reporter.Interaction;
 
-namespace Reporter
+namespace Reporter;
+
+public class Program
 {
-    public class Program
+    // Discord client
+    private readonly DiscordSocketClient _client;
+
+    // Service collection
+    private readonly IServiceProvider _services;
+
+    // Log instance
+    private readonly Logger _logger;
+
+    /// <summary>
+    /// Version
+    /// </summary>
+    public Version Version { get; } 
+        = typeof(Program).Assembly.GetName().Version ?? new(1, 0);
+
+    /// <summary>
+    /// Name
+    /// </summary>
+    public string Name { get; } 
+        = "Reporter";
+
+    /// <summary>
+    /// Author
+    /// </summary>
+    public string Author { get; } 
+        = "Rozen4334";
+
+    /// <summary>
+    /// Description
+    /// </summary>
+    public string Description { get; } 
+        = "A Discord reporter bot for sandbox game servers.";
+
+    /// <summary>
+    /// Ctor
+    /// </summary>
+    public Program()
     {
-        private readonly DiscordSocketClient _client;
+        _services = ConfigureServices;
+        _client = _services.GetRequiredService<DiscordSocketClient>();
+        _logger = _services.GetRequiredService<Logger>();
+    }
 
-        private readonly IServiceProvider _services;
+    /// <summary>
+    /// Static startup init
+    /// </summary>
+    /// <param name="args"></param>
+    static void Main(string[] args) => new Program()
+        .RunAsync()
+        .GetAwaiter()
+        .GetResult();
 
-        private readonly Logger _logger;
-
-        static void Main(string[] args) => new Program()
-            .RunAsync()
-            .GetAwaiter()
-            .GetResult();
-
-        public Program()
+    // Configure all services.
+    private static IServiceProvider ConfigureServices => new ServiceCollection()
+        .AddSingleton(new DiscordSocketClient(new()
         {
-            _services = ConfigureServices;
-            _client = _services.GetRequiredService<DiscordSocketClient>();
-            _logger = _services.GetRequiredService<Logger>();
-        }
+            MessageCacheSize = 100,
+            AlwaysDownloadUsers = true,
+            GatewayIntents = GatewayIntents.All
+        }))
+        .AddSingleton(new Logger())
+        .AddSingleton<TimeManager>()
+        .AddSingleton<SlashCommands>()
+        .AddSingleton<Components>()
+        .BuildServiceProvider();
 
-        public async Task RunAsync()
+    /// <summary>
+    /// Runs the client, starts & configures events.
+    /// </summary>
+    /// <returns></returns>
+    public async Task RunAsync()
+    {
+        _client.Log += Log;
+
+        await _client.LoginAsync(TokenType.Bot, Config.Settings.BotToken);
+
+        _client.MessageReceived += MessageReceived;
+        _client.Ready += Ready;
+
+        await _client.StartAsync();
+
+        await Task.Delay(Timeout.Infinite);
+    }
+
+    // Client message received
+    private async Task MessageReceived(SocketMessage arg)
+    {
+        if (arg is not SocketUserMessage message)
+            return;
+        if (message.Author is not SocketGuildUser user)
+            return;
+
+        int argPos = 0;
+        if (!message.HasMentionPrefix(_client.CurrentUser, ref argPos))
+            return;
+        if (!(user.Id == 539535197935239179 || user.HasRole("Staff")))
+            return;
+        if (message.Content.Contains("addimage"))
         {
-            _client.Log += Log;
+            string[] param = message.Content.Trim().Split(' ');
 
-            await _client.LoginAsync(TokenType.Bot, Config.Settings.BotToken);
-
-            _client.MessageReceived += MessageReceived;
-            _client.Ready += Ready;
-
-            await _client.StartAsync();
-
-            await Task.Delay(Timeout.Infinite);
-        }
-
-        private static IServiceProvider ConfigureServices => new ServiceCollection()
-            .AddSingleton(new DiscordSocketClient(new()
+            if (long.TryParse(param[2], out long id))
             {
-                MessageCacheSize = 100,
-                AlwaysDownloadUsers = true,
-                GatewayIntents = GatewayIntents.All
-            }))
-            .AddSingleton(new Logger())
-            .AddSingleton<TimeManager>()
-            .AddSingleton<SlashCommands>()
-            .AddSingleton<Components>()
-            .BuildServiceProvider();
+                var manager = new ReportManager(user.Guild.Id);
 
-        private async Task MessageReceived(SocketMessage arg)
-        {
-            if (arg is not SocketUserMessage message)
-                return;
-            if (message.Author is not SocketGuildUser user)
-                return;
-
-            int argPos = 0;
-            if (!message.HasMentionPrefix(_client.CurrentUser, ref argPos))
-                return;
-            if (!(user.Id == 539535197935239179 || user.HasRole("Staff")))
-                return;
-            if (message.Content.Contains("addimage"))
-            {
-                string[] param = message.Content.Trim().Split(' ');
-
-                if (long.TryParse(param[2], out long id))
+                if (manager.TryGetReport(id, out var report))
                 {
-                    var manager = new ReportManager(user.Guild.Id);
-
-                    if (manager.TryGetReport(id, out var report))
+                    if (message.Attachments.Any())
                     {
-                        if (message.Attachments.Any())
-                        {
-                            report.AddImages(message.Attachments);
-                            manager.SaveReports();
-                            await message.ReplyAsync("Succesfully added image(s) to report.",
-                                false, null, new AllowedMentions() { MentionRepliedUser = true });
-                            return;
-                        }
-                        report.AddImages(param[3..]);
-                        await message.ReplyAsync("Succesfully added image to report.",
-                            false, null, new AllowedMentions() { MentionRepliedUser = true });
+                        report.AddImages(message.Attachments);
                         manager.SaveReports();
-                    }
-                    else
-                    {
-                        await message.ReplyAsync("This report ID is invalid, please try again by specifying a valid ID.",
+                        await message.ReplyAsync("Succesfully added image(s) to report.",
                             false, null, new AllowedMentions() { MentionRepliedUser = true });
                         return;
                     }
+                    report.AddImages(param[3..]);
+                    await message.ReplyAsync("Succesfully added image to report.",
+                        false, null, new AllowedMentions() { MentionRepliedUser = true });
+                    manager.SaveReports();
+                }
+                else
+                {
+                    await message.ReplyAsync("This report ID is invalid, please try again by specifying a valid ID.",
+                        false, null, new AllowedMentions() { MentionRepliedUser = true });
+                    return;
                 }
             }
         }
+    }
 
-        private async Task Log(LogMessage message) 
-            => await _logger.LogAsync(message);
+    // Client log
+    private async Task Log(LogMessage message) 
+        => await _logger.LogAsync(message);
 
-        private async Task Ready()
+    // Client ready
+    private async Task Ready()
+    {
+        await _client.SetGameAsync($" over Sandbox games", null, ActivityType.Watching);
+
+        await _logger.LogAsync(Name + " Version " + Version);
+        await _logger.LogAsync(Description);
+        await _logger.LogAsync("Created by: " + Author);
+
+        _services.GetRequiredService<Components>().Configure();
+
+        var cmd = _services.GetRequiredService<SlashCommands>().Configure();
+
+        if (cmd.Any())
         {
-            await _client.SetGameAsync($" over Sandbox games", null, ActivityType.Watching);
+            await _logger.LogAsync("Succesfully registered slash commands to all available guilds!");
 
-            _services.GetRequiredService<Components>().Configure();
-
-            var cmd = _services.GetRequiredService<SlashCommands>().Configure();
-
-            if (cmd.Any())
-            {
-                await _logger.LogAsync("Succesfully registered slash commands to all available guilds!");
-
-                foreach (var guild in _client.Guilds)
-                    await guild.BulkOverwriteApplicationCommandAsync(cmd.ToArray());
-            }
+            foreach (var guild in _client.Guilds)
+                await guild.BulkOverwriteApplicationCommandAsync(cmd.ToArray());
         }
     }
 }

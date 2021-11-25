@@ -41,9 +41,9 @@ public class Components
         {
             if (component.User is SocketGuildUser user)
                 await result(component, arg.Length > 1 ? arg[1..] : Array.Empty<string>(), new(user.Guild.Id));
-            // else return log
+            else await _logger.LogAsync("Callback cannot resolve user as guilduser, component has not been executed in guild.", nameof(Components), LogSeverity.Error);
         }
-        // else return log
+        else await _logger.LogAsync($"Callback cannot attach component to Task as: {arg[0]}", nameof(Components), LogSeverity.Error);
     }
 
     private async Task Exit(SocketMessageComponent component, string[] arg, ReportManager manager)

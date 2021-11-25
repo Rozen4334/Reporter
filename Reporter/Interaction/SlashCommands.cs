@@ -97,9 +97,9 @@ public class SlashCommands
         {
             if (command.User is SocketGuildUser user)
                 await result(command, new(user.Guild.Id));
-            // else return log
+            else await _logger.LogAsync("Callback cannot resolve user as guilduser, command has not been executed in guild.", nameof(SlashCommands), LogSeverity.Error);
         }
-        // else return log
+        else await _logger.LogAsync($"Callback cannot attach command to Task as: {command.CommandName}", nameof(SlashCommands), LogSeverity.Error);
     }
 
     private async Task Report(SocketSlashCommand command, ReportManager manager)
@@ -340,7 +340,7 @@ public class SlashCommands
 
         b.AddField("Roles:", (roles.Any()) ? string.Join(", ", roles) : "None.");
 
-        var reports = manager.GetReportByAgent(user.Id).Reverse();
+        var reports = manager.GetReportByModerator(user.Id).Reverse();
 
         List<string> strlist = new();
         foreach (var x in reports)
