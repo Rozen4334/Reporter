@@ -1,26 +1,18 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Reporter.Models;
+using System.Text.Json;
 
-namespace Reporter.Data
+namespace Reporter.Data;
+
+internal class Writer
 {
-    class Writer
-    {
-        public static void SaveUsers(IEnumerable<Report> accounts, string filePath)
-        {
-            string json = JsonConvert.SerializeObject(accounts, Formatting.Indented);
-            File.WriteAllText(filePath, json);
-        }
-        public static IEnumerable<Report> LoadUsers(string filePath)
-        {
-            if (!File.Exists(filePath)) return null;
-            string json = File.ReadAllText(filePath);
-            return JsonConvert.DeserializeObject<List<Report>>(json);
-        }
-        public static bool SaveExists(string filePath) => File.Exists(filePath);
-    }
+    public static void SaveReports(IEnumerable<Report> accounts, string filePath)
+        => File.WriteAllText(filePath, JsonSerializer.Serialize(accounts, 
+            new JsonSerializerOptions() { WriteIndented = true }));
+
+    public static IEnumerable<Report> LoadUsers(string filePath)
+        => JsonSerializer.Deserialize<List<Report>>(File.ReadAllText(filePath)) ?? new();
+
+    public static bool SaveExists(string filePath) 
+        => File.Exists(filePath);
 }
+
