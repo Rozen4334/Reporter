@@ -15,6 +15,14 @@ To host this bot yourself, you need good knowledge of how Discord app developmen
 - [Discord Developer Portal](https://discord.com/developers/applications) - Creating a token, setting up O2Auth & configuring gateway permissions.
 - [Discord.NET-Labs](https://github.com/Discord-Net-Labs/Discord.Net-Labs) - Framework for this application.
 
+### Code structure:
+*If a feature does not belong to a class, something has not been written properly.*
+
+> *If a feature belongs to multiple classes, apply SOLID to figure out the overhead interface.*
+> *Stash commits, do not repeatedly commit.*
+> *Only update a version if all notable bugs are gone.*
+> *Only update version through assemblyversion.*
+
 ---
 
 ## 📇 Examples:
