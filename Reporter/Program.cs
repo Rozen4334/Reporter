@@ -11,6 +11,8 @@ namespace Reporter
 
         private readonly IServiceProvider _services;
 
+        private readonly Logger _logger;
+
         static void Main(string[] args) => new Program()
             .RunAsync()
             .GetAwaiter()
@@ -20,6 +22,7 @@ namespace Reporter
         {
             _services = ConfigureServices;
             _client = _services.GetRequiredService<DiscordSocketClient>();
+            _logger = _services.GetRequiredService<Logger>();
         }
 
         public async Task RunAsync()
@@ -30,8 +33,6 @@ namespace Reporter
 
             _client.MessageReceived += MessageReceived;
             _client.Ready += Ready;
-
-            _services.GetRequiredService<SlashCommands>().Configure();
 
             await _client.StartAsync();
 
@@ -45,6 +46,7 @@ namespace Reporter
                 AlwaysDownloadUsers = true,
                 GatewayIntents = GatewayIntents.All
             }))
+            .AddSingleton(new Logger())
             .AddSingleton<TimeManager>()
             .AddSingleton<SlashCommands>()
             .AddSingleton<Components>()
@@ -64,30 +66,23 @@ namespace Reporter
                 return;
             if (message.Content.Contains("addimage"))
             {
-                string[] input = message.Content.Trim().Split(' ');
+                string[] param = message.Content.Trim().Split(' ');
 
-                if (input.Length > 4)
-                {
-                    await message.ReplyAsync("Invalid syntax, only add one image per execution.",
-                        false, null, new AllowedMentions() { MentionRepliedUser = true });
-                    return;
-                }
-
-                if (int.TryParse(input[2], out int id))
+                if (long.TryParse(param[2], out long id))
                 {
                     var manager = new ReportManager(user.Guild.Id);
 
-                    if (manager.GetReportByID(id, out Report report))
+                    if (manager.TryGetReport(id, out var report))
                     {
                         if (message.Attachments.Any())
                         {
-                            report.AddImages(message.Attachments.ToList());
+                            report.AddImages(message.Attachments);
                             manager.SaveReports();
                             await message.ReplyAsync("Succesfully added image(s) to report.",
                                 false, null, new AllowedMentions() { MentionRepliedUser = true });
                             return;
                         }
-                        report.ProofURLs.Add(input[3]);
+                        report.AddImages(param[3..]);
                         await message.ReplyAsync("Succesfully added image to report.",
                             false, null, new AllowedMentions() { MentionRepliedUser = true });
                         manager.SaveReports();
@@ -102,10 +97,24 @@ namespace Reporter
             }
         }
 
-        private async Task Log(LogMessage message) => await Task.Run(() =>
-            Console.WriteLine(message.ToString()));
+        private async Task Log(LogMessage message) 
+            => await _logger.LogAsync(message);
 
         private async Task Ready()
-            => await _client.SetGameAsync($" over Sandbox games", null, ActivityType.Watching);
+        {
+            await _client.SetGameAsync($" over Sandbox games", null, ActivityType.Watching);
+
+            _services.GetRequiredService<Components>().Configure();
+
+            var cmd = _services.GetRequiredService<SlashCommands>().Configure();
+
+            if (cmd.Any())
+            {
+                await _logger.LogAsync("Succesfully registered slash commands to all available guilds!");
+
+                foreach (var guild in _client.Guilds)
+                    await guild.BulkOverwriteApplicationCommandAsync(cmd.ToArray());
+            }
+        }
     }
 }

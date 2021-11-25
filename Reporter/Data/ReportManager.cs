@@ -59,7 +59,7 @@ namespace Reporter.Data
                 : Enumerable.Empty<Report>();
         }
 
-        public bool TryGetReport(int id, out Report report)
+        public bool TryGetReport(long id, out Report report)
         {
             var result = from x in _reports
                          where x.ID == id

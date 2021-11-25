@@ -5,7 +5,7 @@ namespace Reporter
 {
     public static class Extensions
     {
-        public static List<Report> PendingEntries = new();
+        public static List<Report> Pending = new();
 
         public static bool HasRole(this SocketGuildUser user, string roleName)
         {
@@ -14,7 +14,7 @@ namespace Reporter
                         select a;
             return roles.Any();
         }
-        public static EmbedBuilder Construct(this EmbedBuilder builder, DiscordSocketClient client, IUser user = null)
+        public static EmbedBuilder Construct(this EmbedBuilder builder, DiscordSocketClient client, IUser? user = null)
         {
             builder.WithColor(Color.Blue);
             builder.WithAuthor(user ?? client.CurrentUser);

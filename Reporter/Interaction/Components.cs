@@ -10,9 +10,12 @@ public class Components
 
     private readonly DiscordSocketClient _client;
 
-    public Components(DiscordSocketClient client)
+    private readonly Logger _logger;
+
+    public Components(DiscordSocketClient client, Logger logger)
     {
         _client = client;
+        _logger = logger;
 
         _callback["id_exit"] = Exit;
         _callback["id_confirm"] = Confirm;
@@ -31,6 +34,9 @@ public class Components
     private async Task HandleAsync(SocketMessageComponent component)
     {
         string[] arg = component.Data.CustomId.Split('|');
+        if (arg[1] != component.User.Id.ToString())
+            return;
+
         if (_callback.TryGetValue(arg[0], out var result))
         {
             if (component.User is SocketGuildUser user)
@@ -45,7 +51,7 @@ public class Components
         var builder = new EmbedBuilder().Construct(_client, component.User).WithColor(Color.Red);
         builder.WithTitle("Canceled report creation");
 
-        Extensions.PendingEntries.RemoveAll(x => x.Moderator == component.User.Id);
+        Extensions.Pending.RemoveAll(x => x.Moderator == component.User.Id);
 
         var message = component.Message;
         await message.ModifyAsync(x => x.Components = null);
@@ -55,18 +61,23 @@ public class Components
 
     private async Task Confirm(SocketMessageComponent component, string[] arg, ReportManager manager)
     {
-        var b = new EmbedBuilder().Construct(_client, component.User).WithColor(Color.Green);
-        b.WithTitle("Succesfully wrote report");
+        var b = new EmbedBuilder().Construct(_client, component.User)
+            .WithColor(Color.Green);
+        b.WithTitle("Succesfully registered report!");
 
-        Report? entry = Extensions.PendingEntries.Find(x => x.Moderator == component.User.Id);
-        if (!entry.HasValue)
+        var list = Extensions.Pending.Where(x => x.Moderator == component.User.Id);
+        if (list.Any())
         {
-            await component.RespondAsync("Report not found. This could be caused by an error on the bot, or because it was restarted with this pending report open.");
+            await component.RespondAsync(":x: **Report not found!** This is most likely because of a restart. Please remake the report.");
             return;
         }
 
-        var report = manager.AddReport(entry.Value);
-        Extensions.PendingEntries.Remove(entry.Value);
+        ReportType type = (ReportType)int.Parse(component.Data.Values.First());
+
+        var temp = list.First();
+        temp.Type = type;
+        var report = manager.AddReport(temp);
+        Extensions.Pending.RemoveAll(x => x.Moderator == component.User.Id);
 
         b.WithDescription($"Created report for: ` {report.Username} ` with ID: ` {report.ID} `");
 
@@ -87,7 +98,7 @@ public class Components
         if (manager.TryGetReport(id, out var report))
         {
             if (!report.ProofURLs.Any())
-                builder.WithDescription("No images to display. Add images with ` @reporter addimage <reportID> <image> ` (or attach an image in the message youre sending");
+                builder.WithDescription("No images to display. Add images with ` @reporter addimage <reportID> (image link(s)^) ` (or attach images in the message youre sending \n ^split multiple links by a single space (' ') character.");
             Embed[] embeds = { builder.Build() };
             await component.RespondAsync("", embeds);
             if (report.ProofURLs.Any())
@@ -101,12 +112,12 @@ public class Components
         int id = int.Parse(arg[0]);
         var message = component.Message;
         var b = new EmbedBuilder().Construct(_client, component.User);
+        var c = new ComponentBuilder();
 
         if (manager.TryGetReport(id, out var report))
         {
-            var c = new ComponentBuilder()
-                .WithButton("View images", $"id_img|{component.User.Id}|{report.ID}")
-                .WithButton("View all reports", $"id_img|{component.User.Id}|{report.Username}", ButtonStyle.Secondary, new Emoji("📃"));
+            c.WithButton("View images", $"id_img|{component.User.Id}|{report.ID}");
+            c.WithButton("View all reports", $"id_img|{component.User.Id}|{report.Username}", ButtonStyle.Secondary, new Emoji("📃"));
 
             b.WithTitle($"Report: ` {report.ID} `");
             b.AddField("User:", report.Username, true);
@@ -117,7 +128,7 @@ public class Components
             b.AddField("Punishment:", report.Punishment, true);
             if (report.Note != "")
                 b.AddField("Note:", report.Note);
-            if (report.ProofURLs.Count != 0)
+            if (report.ProofURLs.Count() != 0)
                 b.WithImageUrl(report.ProofURLs.First());
 
             await message.ModifyAsync(x => x.Components = c.Build());
@@ -136,7 +147,7 @@ public class Components
         {
             b.WithTitle($"User information: ` {arg[0]} `");
             b.WithDescription($"I have found ` {reports.Count()} ` report(s) for specified user.");
-            int blocks = 0;
+            long blocks = 0;
             List<string> ids = new();
             foreach (var x in reports)
             {

@@ -2,7 +2,7 @@
 
 public struct Report
 {
-    public int ID { get; set; } = -1;
+    public long ID { get; set; } = -1;
 
     public ulong Moderator { get; set; } = 0;
 
@@ -14,32 +14,29 @@ public struct Report
 
     public string Punishment { get; set; } = "";
 
-    public int BlocksBroken { get; set; } = 0;
+    public long BlocksBroken { get; set; } = 0;
 
     public string Note { get; set; } = "";
 
-    public List<string> ProofURLs { get; set; } = new();
+    public string[] ProofURLs { get; set; } = Array.Empty<string>();
 
-    public Report(int id, ulong agent, string username, ReportType type, DateTime time, string punishment, int blocksbroken = 0, string? note = null)
+    public Report(string target, ulong moderator, DateTime time, string punishment, long blocksbroken = 0, string note = "", long id = -1, ReportType? type = null)
     {
         ID = id;
-        Moderator = agent;
-        Username = username;
-        Type = type;
+        Moderator = moderator;
+        Username = target;
+        Type = type ?? ReportType.Other;
         Time = time;
         Punishment = punishment;
-        Note = note ?? "";
-        BlocksBroken = blocksbroken != 0 ? blocksbroken : 0;
+        Note = note;
+        BlocksBroken = blocksbroken;
     }
 
-    public Report AddImages(List<Attachment> args)
-    {
-        foreach (Attachment attachment in args)
-        {
-            ProofURLs.Add(attachment.Url);
-        }
-        return this;
-    }
+    public void AddImages(IEnumerable<Attachment> args)
+        => ProofURLs = ProofURLs.Concat(args.Select(x => x.Url)).ToArray();
+
+    public void AddImages(string[] args)
+        => ProofURLs = ProofURLs.Concat(args).ToArray();
 }
 
 public enum ReportType

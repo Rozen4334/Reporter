@@ -68,7 +68,7 @@ namespace Reporter
             return span;
         }
 
-        public bool GetFromString(string input, out DateTime time)
+        public bool TryGetFromString(string input, out DateTime time)
         {
             var span = GetSpanFromString(input);
             time = DateTime.UtcNow.Subtract(span);
