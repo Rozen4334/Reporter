@@ -10,7 +10,7 @@ public struct Report
     /// <summary>
     /// Moderator of the report, set as Discord user ID
     /// </summary>
-    public ulong Moderator { get; set; } = 0;
+    public ulong Agent { get; set; } = 0;
 
     /// <summary>
     /// Username of the player to be reported
@@ -20,7 +20,7 @@ public struct Report
     /// <summary>
     /// Type of report
     /// </summary>
-    public ReportType Type { get; set; } = ReportType.Other;
+    public string Type { get; set; } = ReportType.Other.ToString();
 
     /// <summary>
     /// Time when offense was made
@@ -61,9 +61,9 @@ public struct Report
     public Report(string target, ulong moderator, DateTime time, string punishment, long blocksbroken = 0, string note = "", long id = -1, ReportType? type = null)
     {
         ID = id;
-        Moderator = moderator;
+        Agent = moderator;
         Username = target;
-        Type = type ?? ReportType.Other;
+        Type = (type ?? ReportType.Other).ToString();
         Time = time;
         Punishment = punishment;
         Note = note;

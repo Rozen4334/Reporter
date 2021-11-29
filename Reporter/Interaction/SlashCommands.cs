@@ -70,6 +70,7 @@ public class SlashCommands
         new SlashCommandBuilder()
         .WithName("editreport")
         .WithDescription("Edits a report for the specified report ID.")
+        .AddOption("id", ApplicationCommandOptionType.Integer, "The ID of this report.", true)
         .AddOption("player", ApplicationCommandOptionType.String, "The player's name.", false)
         .AddOption("punishment", ApplicationCommandOptionType.String, "The punishment given to said player.", false)
         .AddOption("timespan", ApplicationCommandOptionType.String, "The timespan since this offense.", false)
@@ -121,8 +122,8 @@ public class SlashCommands
             .AddOption("Other", "4", "A different kind of offense.")
             .WithMinValues(1)
             .WithMaxValues(1);
-        c.WithButton("Exit report", $"id_exit|{command.User.Id}", ButtonStyle.Danger, row: 1);
-        c.WithSelectMenu(s, 0);
+        c.WithSelectMenu(s);
+        c.WithButton("Exit report", $"id_exit|{command.User.Id}", ButtonStyle.Danger);
 
         string punishment = (string)d.First(x => x.Name == "punishment").Value;
         string player = (string)d.First(x => x.Name == "player").Value;
@@ -171,10 +172,10 @@ public class SlashCommands
             return;
         }
         c.WithButton("View images", $"id_img|{command.User.Id}|{report.ID}");
-        c.WithButton("View all reports", $"id_img|{command.User.Id}|{report.Username}", ButtonStyle.Secondary, new Emoji("📃")); 
+        c.WithButton("View all reports", $"id_viewall|{command.User.Id}|{report.Username}", ButtonStyle.Secondary, new Emoji("📃"));
 
         b.WithTitle($"Report: ` {report.ID} `");
-        b.AddField("Reported by:", (report.Moderator != 0) ? report.Moderator : "` Unavailable. `");
+        b.AddField("Reported by:", (report.Agent != 0) ? report.Agent : "` Unavailable. `");
         b.AddField("User:", report.Username, true);
         b.AddField("Type:", report.Type.ToString(), true);
         b.AddField("Time:", report.Time);
@@ -242,7 +243,7 @@ public class SlashCommands
                     {
                         b.AddField("Edited type:", $"**🢒 Old:** ` {report.Type} `\n**🢒 New:** ` {d[i].Value} `");
                         if (result is ReportType type)
-                            report.Type = type;
+                            report.Type = type.ToString();
                     }
                     break;
                 case "note":
@@ -317,7 +318,7 @@ public class SlashCommands
             foreach (var x in users)
             {
                 sb.AppendLine($"` {x.ID} ` **{x.Username}** - Type: {x.Type}");
-                sb.AppendLine("⤷ Reported by: " + ((x.Moderator != 0) ? $"**{_client.GetUser(x.Moderator).Username}**" : "Unavailable"));
+                sb.AppendLine("⤷ Reported by: " + ((x.Agent != 0) ? $"**{_client.GetUser(x.Agent).Username}**" : "Unavailable"));
             }
 
         b.AddField($"Reports:", sb.ToString());

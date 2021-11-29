@@ -51,7 +51,7 @@ public class Components
         var builder = new EmbedBuilder().Construct(_client, component.User).WithColor(Color.Red);
         builder.WithTitle("Canceled report creation");
 
-        Extensions.Pending.RemoveAll(x => x.Moderator == component.User.Id);
+        Extensions.Pending.RemoveAll(x => x.Agent == component.User.Id);
 
         var message = component.Message;
         await message.ModifyAsync(x => x.Components = null);
@@ -65,8 +65,8 @@ public class Components
             .WithColor(Color.Green);
         b.WithTitle("Succesfully registered report!");
 
-        var list = Extensions.Pending.Where(x => x.Moderator == component.User.Id);
-        if (list.Any())
+        var list = Extensions.Pending.Where(x => x.Agent == component.User.Id);
+        if (!list.Any())
         {
             await component.RespondAsync(":x: **Report not found!** This is most likely because of a restart. Please remake the report.");
             return;
@@ -75,9 +75,9 @@ public class Components
         ReportType type = (ReportType)int.Parse(component.Data.Values.First());
 
         var temp = list.First();
-        temp.Type = type;
+        temp.Type = type.ToString();
         var report = manager.AddReport(temp);
-        Extensions.Pending.RemoveAll(x => x.Moderator == component.User.Id);
+        Extensions.Pending.RemoveAll(x => x.Agent == component.User.Id);
 
         b.WithDescription($"Created report for: ` {report.Username} ` with ID: ` {report.ID} `");
 
@@ -91,14 +91,14 @@ public class Components
 
     private async Task Images(SocketMessageComponent component, string[] arg, ReportManager manager)
     {
-        int id = int.Parse(arg[0]);
+        int id = int.Parse(arg[1]);
         var builder = new EmbedBuilder().Construct(_client, component.User);
         builder.WithTitle($"Displaying all images for report: ` {id} `");
 
         if (manager.TryGetReport(id, out var report))
         {
             if (!report.ProofURLs.Any())
-                builder.WithDescription("No images to display. Add images with ` @reporter addimage <reportID> (image link(s)^) ` (or attach images in the message youre sending \n ^split multiple links by a single space (' ') character.");
+                builder.WithDescription("**No images to display!** \nAdd images with: \n\n> ` @reporter addimage <reportID> (image link(s)^) ` \n> *Or attach images in the message youre sending.* \n\n :mega: Split multiple links by a single space (' ') character.");
             Embed[] embeds = { builder.Build() };
             await component.RespondAsync("", embeds);
             if (report.ProofURLs.Any())
@@ -109,7 +109,7 @@ public class Components
 
     private async Task ViewReport(SocketMessageComponent component, string[] arg, ReportManager manager)
     {
-        int id = int.Parse(arg[0]);
+        int id = int.Parse(arg[1]);
         var message = component.Message;
         var b = new EmbedBuilder().Construct(_client, component.User);
         var c = new ComponentBuilder();
@@ -117,7 +117,7 @@ public class Components
         if (manager.TryGetReport(id, out var report))
         {
             c.WithButton("View images", $"id_img|{component.User.Id}|{report.ID}");
-            c.WithButton("View all reports", $"id_img|{component.User.Id}|{report.Username}", ButtonStyle.Secondary, new Emoji("📃"));
+            c.WithButton("View all reports", $"id_viewall|{component.User.Id}|{report.Username}", ButtonStyle.Secondary, new Emoji("📃"));
 
             b.WithTitle($"Report: ` {report.ID} `");
             b.AddField("User:", report.Username, true);
@@ -140,12 +140,12 @@ public class Components
     private async Task ViewAll(SocketMessageComponent component, string[] arg, ReportManager manager)
     {
         var b = new EmbedBuilder().Construct(_client, component.User);
-        var reports = manager.GetReports(arg[0]);
+        var reports = manager.GetReports(arg[1]);
         var message = component.Message;
 
         if (reports.Any())
         {
-            b.WithTitle($"User information: ` {arg[0]} `");
+            b.WithTitle($"User information: ` {arg[1]} `");
             b.WithDescription($"I have found ` {reports.Count()} ` report(s) for specified user.");
             long blocks = 0;
             List<string> ids = new();
@@ -163,7 +163,7 @@ public class Components
             b.WithTitle($"No reports found!");
             b.WithDescription("This user does not have any known reports.");
         }
-        await message.ModifyAsync(x => x.Components = null);
+        await message.ModifyAsync(x => x.Components = new ComponentBuilder().Build());
         await message.ModifyAsync(x => x.Embed = b.Build());
         await component.DeferAsync();
     }
@@ -198,7 +198,7 @@ public class Components
         foreach (var x in users)
         {
             sb.AppendLine($"` {x.ID} ` **{x.Username}** - Type: {x.Type}");
-            sb.AppendLine("⤷ Reported by: " + ((x.Moderator != 0) ? $"**{_client.GetUser(x.Moderator).Username}**" : "Unavailable"));
+            sb.AppendLine("⤷ Reported by: " + ((x.Agent != 0) ? $"**{_client.GetUser(x.Agent).Username}**" : "Unavailable"));
         }
         b.AddField($"Reports:", sb.ToString());
         await message.ModifyAsync(x => x.Components = c.Build());

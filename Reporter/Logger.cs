@@ -14,7 +14,7 @@ public class Logger
     public Logger()
     {
         // Set filepath
-        _path = Path.Combine(Config.Settings.SavePath, "Logs", string.Format("{0:yy-MM-dd_HH-mm-ss}.log", DateTime.UtcNow));
+        _path = Path.Combine(Config.Settings.SavePath, "logs", string.Format("{0:yy-MM-dd_HH-mm-ss}.log", DateTime.UtcNow));
 
         // Configure delegate
         _callback[LogSeverity.Debug] = Debug;

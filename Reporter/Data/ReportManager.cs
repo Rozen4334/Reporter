@@ -75,7 +75,7 @@ public class ReportManager
     public IEnumerable<Report> GetReportByModerator(ulong id)
     {
         var result = from x in _reports
-                        where x.Moderator == id
+                        where x.Agent == id
                         select x;
         return result.Any() 
             ? result.ToList() 
