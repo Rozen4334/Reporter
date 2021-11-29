@@ -67,6 +67,18 @@ public class ReportManager
             : Enumerable.Empty<Report>();
     }
 
+    public bool ReplaceOne(Report report)
+    {
+        if (_reports.Any(x => x.ID == report.ID))
+        {
+            var index = _reports.FindIndex(x => x.ID == report.ID);
+            _reports[index] = report;
+            SaveReports();
+            return true;
+        }
+        return false;
+    }
+
     /// <summary>
     /// Get a set of reports by moderator
     /// </summary>

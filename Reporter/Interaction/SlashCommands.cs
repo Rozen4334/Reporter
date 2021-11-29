@@ -76,7 +76,7 @@ public class SlashCommands
         .AddOption("timespan", ApplicationCommandOptionType.String, "The timespan since this offense.", false)
         .AddOption("blocks-broken", ApplicationCommandOptionType.Integer, "The amount of tiles griefed.", false)
         .AddOption("note", ApplicationCommandOptionType.String, "Potential note to add to this report.", false)
-        .AddOption("type", ApplicationCommandOptionType.Integer, "The report's type: 'grief | tunnel | hack | chat | other'.", false),
+        .AddOption("type", ApplicationCommandOptionType.String, "The report's type: 'grief | tunnel | hack | chat | other'.", false),
 
         // List reports command
         new SlashCommandBuilder()
@@ -239,11 +239,19 @@ public class SlashCommands
             switch (d[i].Name)
             {
                 case "type":
-                    if (Enum.TryParse(typeof(ReportType), (string)d[i].Value, out var result))
+                    string val = ((string)d[i].Value).ToLower();
+                    switch (val)
                     {
-                        b.AddField("Edited type:", $"**🢒 Old:** ` {report.Type} `\n**🢒 New:** ` {d[i].Value} `");
-                        if (result is ReportType type)
-                            report.Type = type.ToString();
+                        case "grief":
+                        case "tunnel":
+                        case "chat":
+                        case "hack":
+                        case "other":
+                            b.AddField("Edited type:", $"**🢒 Old:** ` {report.Type} `\n**🢒 New:** ` {val} `");
+                            report.Type = val;
+                            break;
+                        default:
+                            break;
                     }
                     break;
                 case "note":
@@ -271,7 +279,7 @@ public class SlashCommands
                     break;
             }
         }
-        manager.SaveReports();
+        manager.ReplaceOne(report);
         await command.RespondAsync(embed: b.Build());
     }
     private async Task Reports(SocketSlashCommand command, ReportManager manager)
