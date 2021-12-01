@@ -170,7 +170,7 @@ public class Components
 
     private async Task ReportPages(SocketMessageComponent component, string[] arg, ReportManager manager)
     {
-        int page = int.Parse(arg[0]);
+        int page = int.Parse(arg[1]);
         var message = component.Message;
         var b = new EmbedBuilder().Construct(_client, component.User);
 

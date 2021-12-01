@@ -127,16 +127,20 @@ public class Program
             AllowedMentions target = new() { MentionRepliedUser = true };
             if (manager.TryGetReport(id, out var report))
             {
+                bool added = false;
                 if (message.Attachments.Any())
                 {
                     report.AddImages(message.Attachments);
-                    manager.SaveReports();
+                    added = true;
                     await message.ReplyAsync(":white_check_mark: **Succesfully added image(s) to report!**", allowedMentions: target);
-                    return;
                 }
-                report.AddImages(param[3..]);
-                await message.ReplyAsync(":white_check_mark: **Succesfully added image(s) to report!**", allowedMentions: target);
-                manager.SaveReports();
+                if (param.Length > 3)
+                {
+                    report.AddImages(param[3..]);
+                    if (!added)
+                        await message.ReplyAsync(":white_check_mark: **Succesfully added image(s) to report!**", allowedMentions: target);
+                }
+                manager.ReplaceOne(report);
             }
             else
             {

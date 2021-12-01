@@ -78,7 +78,7 @@ public struct Report
         => ProofURLs = ProofURLs.Concat(args.Select(x => x.Url)).ToArray();
 
     /// <summary>
-    /// Addds images from links
+    /// Adds images from links
     /// </summary>
     /// <param name="args"></param>
     public void AddImages(string[] args)
