@@ -98,9 +98,9 @@ public class SlashCommands
         {
             if (command.User is SocketGuildUser user)
             {
-                if (user.HasRole("Staff") || Config.Settings.WhitelistedUsers.Any(x => x == user.Id))
+                if (!user.Roles.Any(x => Config.Settings.WhitelistedRoles.Any(y => y == x.Id)) || Config.Settings.WhitelistedUsers.Any(x => x == user.Id))
                     await result(command, new(user.Guild.Id));
-                else await command.RespondAsync(":x: **Invalid permissions!** You do not have the permission to reporter commands.**");
+                else await command.RespondAsync(":x: **Invalid permissions!** You do not have the permission to reporter commands.", ephemeral: true);
             }
             else await _logger.LogAsync("Callback cannot resolve user as guilduser, command has not been executed in guild.", nameof(SlashCommands), LogSeverity.Error);
         }
