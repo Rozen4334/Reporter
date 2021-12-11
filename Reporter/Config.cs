@@ -38,6 +38,11 @@ public class Settings
     /// </summary>
     public ulong[] WhitelistedUsers { get; set; } = new ulong[] { 539535197935239179 };
 
+    /// <summary>
+    /// All whitelisted role ID's, that get access to command execution.
+    /// </summary>
+    public ulong[] WhitelistedRoles { get; set; } = new ulong[] { 692672782722400288, 880495291760017408, 435911711417958402 };
+
     // reads the settings, internal for safety 
     internal static Settings Read()
     {
