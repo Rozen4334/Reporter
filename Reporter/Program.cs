@@ -112,7 +112,7 @@ public class Program
             return;
 
         // if user is of staff or whitelisted in config
-        if (!(user.Roles.Any(x => Config.Settings.WhitelistedRoles.Any(y => y == x.Id)) || Config.Settings.WhitelistedUsers.Any(x => x == user.Id)))
+        if (!Config.Settings.WhitelistedRoles.Any(y => user.Roles.Select(x => x.Id).Contains(y)) || Config.Settings.WhitelistedUsers.Any(x => x == user.Id)))
             return;
 
         // if commandname is addimage
